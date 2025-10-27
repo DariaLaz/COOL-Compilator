@@ -48,10 +48,14 @@ WS : [ \r\n\u000D]+ -> skip ;
 
 // --------------- булеви константи -------------------
 
-BOOL_CONST : 'true'  { assoc_bool_with_token(true); }
-           | 'false' { assoc_bool_with_token(false); };
+BOOL_CONST : TRUE  { assoc_bool_with_token(true); }
+           | FALSE { assoc_bool_with_token(false); };
+
+fragment TRUE  : 't'('r'|'R')('u'|'U')('e'|'E');
+fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
 
 // --------------- коментари -------------------
+
 
 
 
