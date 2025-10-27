@@ -23,6 +23,10 @@ string cool_token_to_string(Token *token)
 
     case CoolLexer::SEMI:
         return "';'";
+    case CoolLexer::DOT:
+        return "'.'";
+    case CoolLexer::DASH:
+        return "'-'";
         // Добавете тук останалите жетони, които представляват само един символ.
 
     case CoolLexer::DARROW:
@@ -67,6 +71,10 @@ string cool_token_to_string(Token *token)
         return "NOT";
     case CoolLexer::INT_CONST:
         return "INT_CONST";
+    case CoolLexer::TYPEID:
+        return "TYPEID";
+    case CoolLexer::OBJECTID:
+        return "OBJECTID";
     case CoolLexer::ERROR:
         return "ERROR:";
 
@@ -103,6 +111,13 @@ void dump_cool_token(CoolLexer *lexer, ostream &out, Token *token)
     case CoolLexer::INT_CONST:
     {
         out << " " << lexer->get_string_value(token_start_char_index);
+        break;
+    }
+    
+    case CoolLexer::TYPEID:
+    case CoolLexer::OBJECTID:
+    {
+        out << " " << lexer->get_id_value(token_start_char_index);
         break;
     }
 

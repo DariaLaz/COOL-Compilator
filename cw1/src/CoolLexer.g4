@@ -35,6 +35,16 @@ lexer grammar CoolLexer;
         return string_values.at(token_start_char_index);
     }
 
+    // ----------------------- identifiers -------------------------
+    std::map<int, std::string> id_values;
+    void assoc_id_with_token(const std::string &value) {
+        id_values[tokenStartCharIndex] = value;
+    }
+
+    std::string get_id_value(int token_start_char_index) {
+        return id_values.at(token_start_char_index);
+    }
+
 
     // -------------------- errors -----------------------
 
@@ -56,6 +66,10 @@ tokens { ERROR }
 
 SEMI   : ';';
 DARROW : '=>';
+DOT    : '.';
+DASH   : '-';
+
+
 
 WS : [ \r\n]+ -> skip ;
 
@@ -75,6 +89,7 @@ fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
 ONE_LINE_COMMENT : '--' ~[\n]* -> skip ;
 
 // TODO: too slow for testing uncomment when needed
+// Test 30 is not working it is trowing errors
 // MULTILINE_COMMENT : '(*' ( MULTILINE_COMMENT | . )*? '*)' -> skip ;
 
 
@@ -170,9 +185,16 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
 
 INT_CONST: [0-9]+ { assoc_string_with_token(getText()); };
 
+// --------------- идентификатори -------------------
+TYPEID: [A-Z] [a-zA-Z0-9_]* { assoc_id_with_token(getText()); };
+OBJECTID: [a-z] [a-zA-Z0-9_]* { assoc_id_with_token(getText()); };
+
+// --------------- грешки -------------------
+ERROR: . { set_error_message("Invalid symbol \"" + getText() + "\""); };
+
 
 // TODO:
-// ASSIGN BOOL_CONST CASE CLASS DARROW ELSE ESAC FI IF IN
-// INHERITS INT_CONST ISVOID LE LET LOOP NEW NOT OBJECTID OF
-// POOL STR_CONST THEN TYPEID WHILE
+// ASSIGN CASE CLASS DARROW ELSE ESAC FI IF IN
+// INHERITS  ISVOID LE LET LOOP NEW NOT OBJECTID OF
+// POOL  THEN TYPEID WHILE
 
