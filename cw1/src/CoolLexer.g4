@@ -52,4 +52,8 @@ BOOL_CONST : 'true'  { assoc_bool_with_token(true); }
 
 // --------------- текстови низове -------------------
 
+// TODO:
+// ASSIGN BOOL_CONST CASE CLASS DARROW ELSE ESAC FI IF IN
+// INHERITS INT_CONST ISVOID LE LET LOOP NEW NOT OBJECTID OF
+// POOL STR_CONST THEN TYPEID WHILE
 
