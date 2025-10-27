@@ -61,6 +61,27 @@ fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
 
 // --------------- ключови думи -------------------
 
+CLASS options { caseInsensitive=true; }: 'class' ;
+ELSE options { caseInsensitive=true; }: 'else' ;
+FI options { caseInsensitive=true; }: 'fi' ;
+IF options { caseInsensitive=true; }: 'if' ;
+IN options { caseInsensitive=true; }: 'in' ;
+INHERITS options { caseInsensitive=true; }: 'inherits' ;
+ISVOID options { caseInsensitive=true; }: 'isvoid' ;
+LET options { caseInsensitive=true; }: 'let' ;
+LOOP options { caseInsensitive=true; }: 'loop' ;
+POOL options { caseInsensitive=true; }: 'pool' ;
+THEN options { caseInsensitive=true; }: 'then' ;
+WHILE options { caseInsensitive=true; }: 'while' ;
+CASE options { caseInsensitive=true; }: 'case' ;
+ESAC options { caseInsensitive=true; }: 'esac' ;
+NEW options { caseInsensitive=true; }: 'new' ;
+OF options { caseInsensitive=true; }: 'of' ;
+NOT options { caseInsensitive=true; }: 'not' ;
+
+
+
+
 
 
 // --------------- текстови низове -------------------
