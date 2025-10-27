@@ -6,6 +6,7 @@ lexer grammar CoolLexer;
 // Коментарите вътре са на английски, понеже ANTLR4 иначе ги омазва.
 @lexer::members {
 
+    std::vector<char> string_buffer;
     // ----------------------- booleans -------------------------
 
     // A map from token ids to boolean values
@@ -24,15 +25,14 @@ lexer grammar CoolLexer;
     // Maximum length of a constant string literal (CSL) excluding the implicit
     // null character that marks the end of the string.
     const unsigned MAX_STR_CONST = 1024;
-    std::vector<char> string_buffer;
-
+    std::map<int, std::string> string_values;
 
     void assoc_string_with_token(const std::string &value) {
-        
+        string_values[tokenStartCharIndex] = value;
     }
 
     std::string get_string_value(int token_start_char_index) {
-        return std::string();
+        return string_values.at(token_start_char_index);
     }
 }
 
@@ -65,7 +65,9 @@ fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
 
 // --------------- текстови низове -------------------
 
-STR_CONST: '"' '"';
+STR_CONST: '"' (~["])* '"' { 
+    assoc_string_with_token(getText().substr(1, getText().length() - 2)); 
+};
 
 // TODO:
 // ASSIGN BOOL_CONST CASE CLASS DARROW ELSE ESAC FI IF IN
