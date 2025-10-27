@@ -107,13 +107,11 @@ fragment ESC: '\\' .;
 
 STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
     std::string content = getText().substr(1, getText().length() - 2);
-    
-    if (content.length() > MAX_STR_CONST) {
-        set_error_message("String constant too long");
-        return;
-    }
+
 
     std::string processed = "";
+
+    size_t symbols = 0;
 
     for (size_t i = 0; i < content.length(); ++i) {
         if (content[i] == '\\') {
@@ -135,7 +133,15 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
         } else {
             processed += content[i];
         }
+
+        symbols ++;
     }
+
+    if (symbols > MAX_STR_CONST) {
+        set_error_message("String constant too long");
+        return;
+    }
+
 
     assoc_string_with_token(processed); 
 }};
