@@ -127,7 +127,9 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
 
                 switch (next_char) {
                     case '\n':
-                        // TODO: test 91 fails because we need a way to increment the line count  
+                        // TODO: test 91 & 93
+                        // Looks like the idea here is to save the string row by row and combine them, this way we will be able to report the right line number on errors
+                        // and show the error
                     case 'n': processed += "\\n"; break;
                     case 't': processed += "\\t"; break;
                     case 'b': processed += "\\b"; break;
