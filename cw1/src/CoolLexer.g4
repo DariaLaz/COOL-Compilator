@@ -57,7 +57,7 @@ tokens { ERROR }
 SEMI   : ';';
 DARROW : '=>';
 
-WS : [ \r\n\u000D]+ -> skip ;
+WS : [ \r\n]+ -> skip ;
 
 // Добавете тук останалите жетони, които представляват просто текст.
 
@@ -159,7 +159,10 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
 
 
     assoc_string_with_token(processed); 
-}};
+}}
+| '"' (~["\r\n])* [\r\n] {
+    set_error_message("String contains unescaped new line");
+};
 
 // --------------- числа -------------------
 
