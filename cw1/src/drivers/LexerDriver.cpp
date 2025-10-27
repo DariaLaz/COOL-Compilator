@@ -67,8 +67,8 @@ string cool_token_to_string(Token *token)
         return "NOT";
     case CoolLexer::INT_CONST:
         return "INT_CONST";
-
-        // Добавете тук останалите валидни жетони (включително и ERROR).
+    case CoolLexer::ERROR:
+        return "ERROR:";
 
     default:
         return "<Invalid Token>: " + token->toString();
@@ -87,18 +87,15 @@ void dump_cool_token(CoolLexer *lexer, ostream &out, Token *token)
 
     auto token_type = token->getType();
     auto token_start_char_index = token->getStartIndex();
-    switch (token_type)
-    {
-    case CoolLexer::BOOL_CONST:
-    {
+    switch (token_type) {
+    case CoolLexer::BOOL_CONST: {
         out << " "
             << (lexer->get_bool_value(token_start_char_index) ? "true"
                                                               : "false");
         break;
     }
 
-    case CoolLexer::STR_CONST:
-    {
+    case CoolLexer::STR_CONST: {
         out << " " << '"' << lexer->get_string_value(token_start_char_index) << '"';
         break;
     }
@@ -108,7 +105,11 @@ void dump_cool_token(CoolLexer *lexer, ostream &out, Token *token)
         out << " " << lexer->get_string_value(token_start_char_index);
         break;
     }
-        // Добавете тук още случаи, за жетони, към които е прикачен специален смисъл.
+
+    case CoolLexer::ERROR: {
+        out << " " << lexer->get_error_message(token_start_char_index);
+        break;
+    }
     }
 
     out << endl;

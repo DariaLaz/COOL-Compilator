@@ -34,9 +34,25 @@ lexer grammar CoolLexer;
     std::string get_string_value(int token_start_char_index) {
         return string_values.at(token_start_char_index);
     }
+
+
+    // -------------------- errors -----------------------
+
+    std::map<int, std::string> error_messages;
+
+    void set_error_message(const std::string &message) {
+        setType(ERROR);
+        error_messages[tokenStartCharIndex] = message;
+    }
+
+    std::string get_error_message(int token_start_char_index) {
+        return error_messages.at(token_start_char_index);
+    }
 }
 
 // --------------- прости жетони -------------------
+
+tokens { ERROR }
 
 SEMI   : ';';
 DARROW : '=>';
@@ -87,21 +103,26 @@ NOT options { caseInsensitive=true; }: 'not' ;
 
 // --------------- текстови низове -------------------
 
-STR_CONST: '"' (~["])* '"' {{
+fragment ESC: '\\' .;
+
+STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
     std::string content = getText().substr(1, getText().length() - 2);
+    
+    if (content.length() > MAX_STR_CONST) {
+        set_error_message("String constant too long");
+        return;
+    }
+
     std::string processed = "";
 
     for (size_t i = 0; i < content.length(); ++i) {
         if (content[i] == '\\') {
-            if (i + 1 >= content.length()) {
-                // TODO: maybe handle error for invalid escape sequence
-                break;
-            }
-
             i++; 
             char next_char = content[i];
 
             switch (next_char) {
+                case '\n':
+                    // TODO: test 91 fails because we need a way to increment the line count  
                 case 'n': processed += "\\n"; break;
                 case 't': processed += "\\t"; break;
                 case 'b': processed += "\\b"; break;
