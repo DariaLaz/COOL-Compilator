@@ -85,8 +85,6 @@ NOT options { caseInsensitive=true; }: 'not' ;
 
 
 
-
-
 // --------------- текстови низове -------------------
 
 STR_CONST: '"' (~["])* '"' {{
@@ -120,6 +118,11 @@ STR_CONST: '"' (~["])* '"' {{
 
     assoc_string_with_token(processed); 
 }};
+
+// --------------- числа -------------------
+
+INT_CONST: [0-9]+ { assoc_string_with_token(getText()); };
+
 
 // TODO:
 // ASSIGN BOOL_CONST CASE CLASS DARROW ELSE ESAC FI IF IN

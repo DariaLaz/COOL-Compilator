@@ -65,6 +65,9 @@ string cool_token_to_string(Token *token)
         return "OF";
     case CoolLexer::NOT:
         return "NOT";
+    case CoolLexer::INT_CONST:
+        return "INT_CONST";
+
         // Добавете тук останалите валидни жетони (включително и ERROR).
 
     default:
@@ -97,6 +100,12 @@ void dump_cool_token(CoolLexer *lexer, ostream &out, Token *token)
     case CoolLexer::STR_CONST:
     {
         out << " " << '"' << lexer->get_string_value(token_start_char_index) << '"';
+        break;
+    }
+
+    case CoolLexer::INT_CONST:
+    {
+        out << " " << lexer->get_string_value(token_start_char_index);
         break;
     }
         // Добавете тук още случаи, за жетони, към които е прикачен специален смисъл.
