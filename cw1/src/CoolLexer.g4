@@ -88,9 +88,37 @@ NOT options { caseInsensitive=true; }: 'not' ;
 
 // --------------- текстови низове -------------------
 
-STR_CONST: '"' (~["])* '"' { 
-    assoc_string_with_token(getText().substr(1, getText().length() - 2)); 
-};
+STR_CONST: '"' (~["])* '"' {{
+    std::string content = getText().substr(1, getText().length() - 2);
+    std::string processed = "";
+
+    for (size_t i = 0; i < content.length(); ++i) {
+        if (content[i] == '\\') {
+            if (i + 1 >= content.length()) {
+                // TODO: maybe handle error for invalid escape sequence
+                break;
+            }
+
+            i++; 
+            char next_char = content[i];
+
+            switch (next_char) {
+                case 'n': processed += "\\n"; break;
+                case 't': processed += "\\t"; break;
+                case 'b': processed += "\\b"; break;
+                case 'f': processed += "\\f"; break;
+                case '\\': processed += "\\\\"; break;
+                case '"': processed += "\\\""; break;
+                case '\'': processed += "\\\'"; break;
+                default: processed += next_char; break;
+            }
+        } else {
+            processed += content[i];
+        }
+    }
+
+    assoc_string_with_token(processed); 
+}};
 
 // TODO:
 // ASSIGN BOOL_CONST CASE CLASS DARROW ELSE ESAC FI IF IN
