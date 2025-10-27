@@ -64,7 +64,7 @@ lexer grammar CoolLexer;
 
 tokens { ERROR }
 
-WS : [ \r\n]+ -> skip ;
+WS : [ \t\r\n]+ -> skip ;
 
 // --------------- прости жетони -------------------
 
@@ -117,6 +117,7 @@ ONE_LINE_COMMENT : '--' ~[\n]* -> skip ;
 // TODO: too slow for testing uncomment when needed
 // Test 30 is not working it is trowing errors
 // MULTILINE_COMMENT : '(*' ( MULTILINE_COMMENT | . )*? '*)' -> skip ;
+MULTILINE_COMMENT : '(*' (.)*? '*)' -> skip ;
 
 
 // --------------- булеви константи -------------------
@@ -140,13 +141,17 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
 
     size_t symbols = 0;
 
-    for (size_t i = 0; i < content.length(); ++i) {
+    for (size_t i = 0; i < content.length(); ++i, symbols ++) {
         char current_char = content[i];
 
         switch (current_char) {
             case '\0': {
                 set_error_message("String contains null character");
                 return;
+            }
+            case '\t': {
+                processed += "\\t";
+                break;
             }
             case '\\': {
                 i++; 
@@ -174,11 +179,15 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
                 break;  
             }
             default: {
+                if (current_char < 0x20 || current_char == 0x7F) {
+                    char buf[10];
+                    sprintf(buf, "<0x%02x>", current_char);
+                    processed += buf;
+                    continue;
+                }
                 processed += content[i];
             }
         }
-
-        symbols ++;
     }
 
     if (symbols > MAX_STR_CONST) {
