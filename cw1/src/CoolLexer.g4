@@ -114,24 +114,39 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
     size_t symbols = 0;
 
     for (size_t i = 0; i < content.length(); ++i) {
-        if (content[i] == '\\') {
-            i++; 
-            char next_char = content[i];
+        char current_char = content[i];
 
-            switch (next_char) {
-                case '\n':
-                    // TODO: test 91 fails because we need a way to increment the line count  
-                case 'n': processed += "\\n"; break;
-                case 't': processed += "\\t"; break;
-                case 'b': processed += "\\b"; break;
-                case 'f': processed += "\\f"; break;
-                case '\\': processed += "\\\\"; break;
-                case '"': processed += "\\\""; break;
-                case '\'': processed += "\\\'"; break;
-                default: processed += next_char; break;
+        switch (current_char) {
+            case '\0': {
+                set_error_message("String contains null character");
+                return;
             }
-        } else {
-            processed += content[i];
+            case '\\': {
+                i++; 
+                char next_char = content[i];
+
+                switch (next_char) {
+                    case '\n':
+                        // TODO: test 91 fails because we need a way to increment the line count  
+                    case 'n': processed += "\\n"; break;
+                    case 't': processed += "\\t"; break;
+                    case 'b': processed += "\\b"; break;
+                    case 'f': processed += "\\f"; break;
+                    case '\\': processed += "\\\\"; break;
+                    case '"': processed += "\\\""; break;
+                    case '\'': processed += "\\\'"; break;
+                    case '\0': {
+                        set_error_message("String contains escaped null character");
+                        return;
+                    }
+                    default: processed += next_char; break;
+                } 
+
+                break;  
+            }
+            default: {
+                processed += content[i];
+            }
         }
 
         symbols ++;
