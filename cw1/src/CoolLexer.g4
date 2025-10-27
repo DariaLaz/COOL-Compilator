@@ -56,7 +56,9 @@ fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
 
 // --------------- коментари -------------------
 
+ONE_LINE_COMMENT : '--' ~[\n]* -> skip ;
 
+MULTILINE_COMMENT : '(*' ( MULTILINE_COMMENT | . )*? '*)' -> skip ;
 
 
 // --------------- ключови думи -------------------
