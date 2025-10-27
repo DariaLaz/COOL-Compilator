@@ -60,37 +60,33 @@ lexer grammar CoolLexer;
     }
 }
 
-// --------------- прости жетони -------------------
+// --------------- специални жетони -------------------
 
 tokens { ERROR }
 
-SEMI   : ';';
-DARROW : '=>';
-DOT    : '.';
-DASH   : '-';
-
-
-
 WS : [ \r\n]+ -> skip ;
 
-// Добавете тук останалите жетони, които представляват просто текст.
+// --------------- прости жетони -------------------
 
-
-// --------------- булеви константи -------------------
-
-BOOL_CONST : TRUE  { assoc_bool_with_token(true); }
-           | FALSE { assoc_bool_with_token(false); };
-
-fragment TRUE  : 't'('r'|'R')('u'|'U')('e'|'E');
-fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
-
-// --------------- коментари -------------------
-
-ONE_LINE_COMMENT : '--' ~[\n]* -> skip ;
-
-// TODO: too slow for testing uncomment when needed
-// Test 30 is not working it is trowing errors
-// MULTILINE_COMMENT : '(*' ( MULTILINE_COMMENT | . )*? '*)' -> skip ;
+SEMI   : ';';
+LBRACE : '{';  
+RBRACE : '}';
+LPAREN : '(';
+COMMA  : ',';
+RPAREN : ')';
+COLON  : ':';
+AT     : '@';
+DOT    : '.';
+PLUS   : '+';
+MINUS  : '-';
+MULT   : '*';
+DIV    : '/';
+TILDE  : '~';
+LT     : '<';
+EQ     : '=';
+LE     : '<=';
+DARROW : '=>';
+ASSIGN : '<-';
 
 
 // --------------- ключови думи -------------------
@@ -114,6 +110,22 @@ OF options { caseInsensitive=true; }: 'of' ;
 NOT options { caseInsensitive=true; }: 'not' ;
 
 
+// --------------- коментари -------------------
+
+ONE_LINE_COMMENT : '--' ~[\n]* -> skip ;
+
+// TODO: too slow for testing uncomment when needed
+// Test 30 is not working it is trowing errors
+// MULTILINE_COMMENT : '(*' ( MULTILINE_COMMENT | . )*? '*)' -> skip ;
+
+
+// --------------- булеви константи -------------------
+
+BOOL_CONST : TRUE  { assoc_bool_with_token(true); }
+           | FALSE { assoc_bool_with_token(false); };
+
+fragment TRUE  : 't'('r'|'R')('u'|'U')('e'|'E');
+fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
 
 
 // --------------- текстови низове -------------------

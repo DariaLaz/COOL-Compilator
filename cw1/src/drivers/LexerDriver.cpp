@@ -23,14 +23,43 @@ string cool_token_to_string(Token *token)
 
     case CoolLexer::SEMI:
         return "';'";
+    case CoolLexer::LBRACE:
+        return "'{'";
+    case CoolLexer::RBRACE:
+        return "'}'";
+    case CoolLexer::LPAREN:
+        return "'('";
+    case CoolLexer::COMMA:
+        return "','";
+    case CoolLexer::RPAREN:
+        return "')'";
+    case CoolLexer::COLON:
+        return "':'";
+    case CoolLexer::AT:
+        return "'@'";
     case CoolLexer::DOT:
         return "'.'";
-    case CoolLexer::DASH:
+    case CoolLexer::PLUS:
+        return "'+'";
+    case CoolLexer::MINUS:
         return "'-'";
-        // Добавете тук останалите жетони, които представляват само един символ.
-
+    case CoolLexer::MULT:
+        return "'*'";
+    case CoolLexer::DIV:
+        return "'/'";
+    case CoolLexer::TILDE:
+        return "'~'";
+    case CoolLexer::LT:
+        return "'<'";
+    case CoolLexer::EQ:
+        return "'='";
+    case CoolLexer::LE:
+        return "LE";
+    case CoolLexer::ASSIGN:
+        return "ASSIGN";
     case CoolLexer::DARROW:
         return "DARROW";
+
     case CoolLexer::BOOL_CONST:
         return "BOOL_CONST";
     case CoolLexer::STR_CONST:
