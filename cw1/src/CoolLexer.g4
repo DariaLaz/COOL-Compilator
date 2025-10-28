@@ -173,9 +173,14 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
                         // TODO: test 91 & 93
                         // Looks like the idea here is to save the string row by row and combine them, this way we will be able to report the right line number on errors
                         // and show the error
-                    case 'n': processed += "\\n"; break;
-                    case 't': processed += "\\t"; break;
-                    case 'b': processed += "\\b"; break;
+                    case 'n': 
+                        processed += "\\n"; break;
+                    case '\t':
+                    case 't': 
+                        processed += "\\t"; break;
+                    case '\b':
+                    case 'b': 
+                        processed += "\\b"; break;
                     case 'f': processed += "\\f"; break;
                     case '\\': processed += "\\\\"; break;
                     case '"': processed += "\\\""; break;
@@ -212,12 +217,15 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
 INT_CONST: [0-9]+ { assoc_string_with_token(getText()); };
 
 // --------------- идентификатори -------------------
+
 TYPEID: [A-Z] [a-zA-Z0-9_]* { assoc_id_with_token(getText()); };
 OBJECTID: [a-z] [a-zA-Z0-9_]* { assoc_id_with_token(getText()); };
 
 // --------------- грешки -------------------
+
 ERROR: . {{
     std::string invalid_symbol = maybe_escape_control_char(getText()[0]);
+    invalid_symbol = invalid_symbol == "\\" ? "\\\\" : invalid_symbol;
     set_error_message("Invalid symbol \"" + invalid_symbol + "\""); 
 }};
 
