@@ -35,6 +35,17 @@ lexer grammar CoolLexer;
         return string_values.at(token_start_char_index);
     }
 
+    std::string maybe_escape_control_char(char c) {
+        if (c < 0x20 || c == 0x7F) {
+            char buf[10];
+            sprintf(buf, "<0x%02x>", c);
+
+            return std::string(buf);
+        }
+
+        return std::string(1, c);
+    }
+
     // ----------------------- identifiers -------------------------
     std::map<int, std::string> id_values;
     void assoc_id_with_token(const std::string &value) {
@@ -179,13 +190,7 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
                 break;  
             }
             default: {
-                if (current_char < 0x20 || current_char == 0x7F) {
-                    char buf[10];
-                    sprintf(buf, "<0x%02x>", current_char);
-                    processed += buf;
-                    continue;
-                }
-                processed += content[i];
+                processed += maybe_escape_control_char(content[i]);
             }
         }
     }
@@ -211,7 +216,10 @@ TYPEID: [A-Z] [a-zA-Z0-9_]* { assoc_id_with_token(getText()); };
 OBJECTID: [a-z] [a-zA-Z0-9_]* { assoc_id_with_token(getText()); };
 
 // --------------- грешки -------------------
-ERROR: . { set_error_message("Invalid symbol \"" + getText() + "\""); };
+ERROR: . {{
+    std::string invalid_symbol = maybe_escape_control_char(getText()[0]);
+    set_error_message("Invalid symbol \"" + invalid_symbol + "\""); 
+}};
 
 
 // TODO:
