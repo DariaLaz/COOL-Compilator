@@ -24,13 +24,23 @@ lexer grammar CoolLexer;
     // null character that marks the end of the string.
     const unsigned MAX_STR_CONST = 1024;
     std::map<int, std::string> string_values;
+    std::map<int, int> number_of_lines;
 
-    void assoc_string_with_token(const std::string &value) {
+    void assoc_string_with_token(const std::string &value, int lines) {
         string_values[tokenStartCharIndex] = value;
+        number_of_lines[tokenStartCharIndex] = lines;
     }
 
     std::string get_string_value(int token_start_char_index) {
         return string_values.at(token_start_char_index);
+    }
+
+    int maybe_get_number_of_lines_for_string(int token_start_char_index) {
+        if (number_of_lines.find(token_start_char_index) == number_of_lines.end()) {
+            return 0;
+        }
+
+        return number_of_lines.at(token_start_char_index);
     }
 
     std::string maybe_escape_control_char(char c) {
@@ -42,6 +52,16 @@ lexer grammar CoolLexer;
         }
 
         return std::string(1, c);
+    }
+
+    int count_new_lines_in_string(const std::string &s) {
+        int lines = 0;
+        for (char c : s) {
+            if (c == '\n') {
+                lines++;
+            }
+        }
+        return lines;
     }
 
     // ----------------------- identifiers -------------------------
@@ -62,6 +82,12 @@ lexer grammar CoolLexer;
     void set_error_message(const std::string &message) {
         setType(ERROR);
         error_messages[tokenStartCharIndex] = message;
+    }
+
+    void set_error_message(const std::string &message, int lines) {
+        setType(ERROR);
+        error_messages[tokenStartCharIndex] = message;
+        number_of_lines[tokenStartCharIndex] = lines;
     }
 
     std::string get_error_message(int token_start_char_index) {
@@ -152,6 +178,7 @@ STR_CONST: '"' (ESC | ~["\\\n])* '"' {{
     std::string processed = "";
 
     size_t symbols = 0;
+    size_t lines = 0;
 
     for (size_t i = 0; i < content.length(); ++i, symbols ++) {
         char current_char = content[i];
@@ -179,9 +206,7 @@ STR_CONST: '"' (ESC | ~["\\\n])* '"' {{
 
                 switch (next_char) {
                     case '\n':
-                        // TODO: test 91 & 93
-                        // Looks like the idea here is to save the string row by row and combine them, this way we will be able to report the right line number on errors
-                        // and show the error
+                        lines++;
                     case 'n': 
                         processed += "\\n"; break;
                     case '\t':
@@ -212,23 +237,23 @@ STR_CONST: '"' (ESC | ~["\\\n])* '"' {{
     }
 
     if (symbols > MAX_STR_CONST) {
-        set_error_message("String constant too long");
+        set_error_message("String constant too long", lines);
         return;
     }
 
 
-    assoc_string_with_token(processed); 
+    assoc_string_with_token(processed, lines); 
 }}
 | '"' (ESC | ~["\\\n])* [\n] {
-    set_error_message("String contains unescaped new line");
+    set_error_message("String contains unescaped new line", count_new_lines_in_string(getText()) - 1);
 }
 | '"' (ESC | ~["\\\n])* EOF {
-    set_error_message("Unterminated string at EOF");
+    set_error_message("Unterminated string at EOF", count_new_lines_in_string(getText()));
 };
 
 // --------------- числа -------------------
 
-INT_CONST: [0-9]+ { assoc_string_with_token(getText()); };
+INT_CONST: [0-9]+ { assoc_string_with_token(getText(), 0); };
 
 // --------------- идентификатори -------------------
 
