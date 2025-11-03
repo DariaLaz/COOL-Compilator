@@ -126,7 +126,10 @@ ONE_LINE_COMMENT : '--' ~[\n]* -> skip ;
 // TODO: too slow for testing uncomment when needed
 // Test 30 is not working it is trowing errors
 // MULTILINE_COMMENT : '(*' ( MULTILINE_COMMENT | . )*? '*)' -> skip ;
-MULTILINE_COMMENT : '(*' (.)*? '*)' -> skip ;
+//MULTILINE_COMMENT : '(*' (.)*? '*)' -> skip ;
+
+MULTILINE_COMMENT : '(*' -> pushMode(COMMENT_MODE), skip;
+
 
 
 // --------------- булеви константи -------------------
@@ -240,9 +243,14 @@ ERROR: . {{
     set_error_message("Invalid symbol \"" + invalid_symbol + "\""); 
 }};
 
+UNMATCHED_COMMENT_CLOSE
+    : '*)' { set_error_message("Unmatched *)"); }
+    ;
 
-// TODO:
-// ASSIGN CASE CLASS DARROW ELSE ESAC FI IF IN
-// INHERITS  ISVOID LE LET LOOP NEW NOT OBJECTID OF
-// POOL  THEN TYPEID WHILE
+
+mode COMMENT_MODE;
+
+COMMENT_OPEN  : '(*' -> pushMode(COMMENT_MODE), skip;
+COMMENT_CLOSE : '*)' -> popMode, skip;
+COMMENT_TEXT  : . -> skip;
 
