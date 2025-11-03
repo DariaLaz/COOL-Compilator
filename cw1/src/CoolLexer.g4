@@ -253,4 +253,9 @@ mode COMMENT_MODE;
 COMMENT_OPEN  : '(*' -> pushMode(COMMENT_MODE), skip;
 COMMENT_CLOSE : '*)' -> popMode, skip;
 COMMENT_TEXT  : . -> skip;
-
+COMMENT_EOF
+    : .? EOF
+      {
+          set_error_message("EOF in comment");
+      }
+    ;
