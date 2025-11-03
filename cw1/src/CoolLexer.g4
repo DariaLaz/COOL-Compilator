@@ -216,8 +216,11 @@ STR_CONST: '"' (ESC | ~["\\\n])* '"' {{
 
     assoc_string_with_token(processed); 
 }}
-| '"' (~["\r\n])* [\n] {
+| '"' (ESC | ~["\\\n])* [\n] {
     set_error_message("String contains unescaped new line");
+}
+| '"' (ESC | ~["\\\n])* EOF {
+    set_error_message("Unterminated string at EOF");
 };
 
 // --------------- числа -------------------
