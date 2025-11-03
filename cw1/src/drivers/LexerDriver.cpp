@@ -112,6 +112,26 @@ string cool_token_to_string(Token *token)
     }
 }
 
+int getLine(Token *token)
+{
+    auto token_type = token->getType();
+
+    if(token_type == CoolLexer::STR_CONST) {
+        std::string content = token->getText().substr(1, token->getText().length() - 2);
+        int startLine = token->getLine();
+        int endLine = startLine;
+        for (char c : content) {
+            if (c == '\n') {
+                endLine++;
+            }
+        }
+
+        return endLine;
+    }
+
+    return token->getLine();
+}
+
 void dump_cool_token(CoolLexer *lexer, ostream &out, Token *token)
 {
     if (token->getType() == static_cast<size_t>(-1))
@@ -120,7 +140,7 @@ void dump_cool_token(CoolLexer *lexer, ostream &out, Token *token)
         return;
     }
 
-    out << "#" << token->getLine() << " " << cool_token_to_string(token);
+    out << "#" << getLine(token) << " " << cool_token_to_string(token);
 
     auto token_type = token->getType();
     auto token_start_char_index = token->getStartIndex();
