@@ -5,8 +5,6 @@ lexer grammar CoolLexer;
 //
 // Коментарите вътре са на английски, понеже ANTLR4 иначе ги омазва.
 @lexer::members {
-
-    std::vector<char> string_buffer;
     // ----------------------- booleans -------------------------
 
     // A map from token ids to boolean values
@@ -144,7 +142,7 @@ fragment FALSE : 'f'('a'|'A')('l'|'L')('s'|'S')('e'|'E');
 
 fragment ESC: '\\' .;
 
-STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
+STR_CONST: '"' (ESC | ~["\\\n])* '"' {{
     std::string content = getText().substr(1, getText().length() - 2);
 
 
@@ -164,6 +162,14 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
                 processed += "\\t";
                 break;
             }
+            case '\f': {
+                processed += "\\f";
+                break;
+            }
+            case '\r': {
+                processed += "<0x0d>";
+                break;
+            }
             case '\\': {
                 i++; 
                 char next_char = content[i];
@@ -181,7 +187,9 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
                     case '\b':
                     case 'b': 
                         processed += "\\b"; break;
-                    case 'f': processed += "\\f"; break;
+                    case '\f':
+                    case 'f': 
+                        processed += "\\f"; break;
                     case '\\': processed += "\\\\"; break;
                     case '"': processed += "\\\""; break;
                     case '\'': processed += "\\\'"; break;
@@ -208,7 +216,7 @@ STR_CONST: '"' (ESC | ~["\\\r\n])* '"' {{
 
     assoc_string_with_token(processed); 
 }}
-| '"' (~["\r\n])* [\r\n] {
+| '"' (~["\r\n])* [\n] {
     set_error_message("String contains unescaped new line");
 };
 
