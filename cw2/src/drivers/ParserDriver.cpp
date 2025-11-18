@@ -83,6 +83,7 @@ private:
     CoolParser *parser_;
     string file_name_;
     int indent = 0;
+    bool debug = false;
 
     void increaseIndent()
     {
@@ -96,6 +97,10 @@ private:
 
     void printLine(string str)
     {
+        if (debug)
+        {
+            cout << ">";
+        }
         for (int i = 0; i < indent; i++)
         {
             cout << " ";
@@ -159,6 +164,35 @@ public:
         printLine("_no_expr");
         printLine(": _no_type");
 
+        this->decreaseIndent();
+
+        return any{};
+    }
+
+    any visitMethod(CoolParser::MethodContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_method");
+        this->increaseIndent();
+        printLine(ctx->OBJECTID()->getText());
+        printLine(ctx->TYPEID()->getText());
+
+        visitChildren(ctx);
+
+        // todo move
+        printLine(": _no_type");
+
+        this->decreaseIndent();
+
+        return any{};
+    }
+
+    any visitExpresion(CoolParser::ExpresionContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_object");
+        this->increaseIndent();
+        printLine(ctx->OBJECTID()->getText());
         this->decreaseIndent();
 
         return any{};

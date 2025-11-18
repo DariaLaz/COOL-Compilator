@@ -4,8 +4,12 @@ options { tokenVocab=CoolLexer; }
 
 program: (class ';')+ ;
 
-class  : CLASS TYPEID '{' feature* '}' ;
+class: CLASS TYPEID '{' feature* '}' ;
 
-feature: attribute;
+feature: attribute | method;
 
-attribute : OBJECTID':' TYPEID ';' ;
+attribute: OBJECTID':' TYPEID ';' ;
+
+method: OBJECTID'('')'':' TYPEID '{' expresion '}' ';' ;
+
+expresion: OBJECTID ;
