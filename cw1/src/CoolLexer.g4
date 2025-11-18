@@ -204,7 +204,7 @@ STR_CONST: '"' (ESC | ~["\\\n])* '"' {{
                 i++; 
                 char next_char = content[i];
 
-                switch (next_char) {
+                switch (next_char) { 
                     case '\n':
                         lines++;
                     case 'n': 
