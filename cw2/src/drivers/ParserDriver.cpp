@@ -17,7 +17,8 @@ using namespace antlr4;
 namespace fs = filesystem;
 
 /// Converts token to coursework-specific string representation.
-string cool_token_to_string(CoolLexer *lexer, Token *token) {
+string cool_token_to_string(CoolLexer *lexer, Token *token)
+{
     auto token_type = token->getType();
 
     // clang-format off
@@ -75,54 +76,114 @@ string cool_token_to_string(CoolLexer *lexer, Token *token) {
     // clang-format on
 }
 
-class TreePrinter : public CoolParserBaseVisitor {
-  private:
+class TreePrinter : public CoolParserBaseVisitor
+{
+private:
     CoolLexer *lexer_;
     CoolParser *parser_;
     string file_name_;
+    int indent = 0;
 
-  public:
+    void increaseIndent()
+    {
+        this->indent += 2;
+    }
+
+    void decreaseIndent()
+    {
+        this->indent -= 2;
+    }
+
+    void printLine(string str)
+    {
+        for (int i = 0; i < indent; i++)
+        {
+            cout << " ";
+        }
+
+        cout << str << endl;
+    }
+
+    void printRow(size_t row)
+    {
+        printLine("#" + std::to_string(row));
+    }
+
+public:
     TreePrinter(CoolLexer *lexer, CoolParser *parser, const string &file_name)
         : lexer_(lexer), parser_(parser), file_name_(file_name) {}
 
-    any visitProgram(CoolParser::ProgramContext *ctx) override {
-        cout << '#' << ctx->getStop()->getLine() << endl;
-        cout << "_program" << endl;
+    any visitProgram(CoolParser::ProgramContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_program");
+        this->increaseIndent();
         visitChildren(ctx);
+        this->decreaseIndent();
 
         return any{};
     }
 
-    any visitClass(CoolParser::ClassContext *ctx) override {
-        cout << "  #" << ctx->getStop()->getLine() << endl;
-        cout << "  _class" << endl;
-        cout << "    " << ctx->TYPEID()->getText() << endl;
-        cout << "    " << "Object" << endl;
-        cout << "    \"" << file_name_ << '"' << endl;
-        cout << "    " << '(' << endl;
-        cout << "    " << ')' << endl;
+    any visitClass(CoolParser::ClassContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_class");
+        this->increaseIndent();
+        printLine(ctx->TYPEID()->getText());
+        printLine("Object");
+        printLine("\"" + file_name_ + '"');
+        printLine("(");
+        visitChildren(ctx);
+        printLine(")");
+        this->decreaseIndent();
 
         return any{};
     }
 
-  public:
+    any visitFeature(CoolParser::FeatureContext *ctx) override
+    {
+        visitChildren(ctx);
+        return any{};
+    }
+
+    any visitAttribute(CoolParser::AttributeContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_attr");
+        this->increaseIndent();
+        printLine(ctx->OBJECTID()->getText());
+        printLine(ctx->TYPEID()->getText());
+
+        // todo move
+        printRow(ctx->getStop()->getLine());
+        printLine("_no_expr");
+        printLine(": _no_type");
+
+        this->decreaseIndent();
+
+        return any{};
+    }
+
+public:
     void print() { visitProgram(parser_->program()); }
 };
 
-class ErrorPrinter : public BaseErrorListener {
-  private:
+class ErrorPrinter : public BaseErrorListener
+{
+private:
     string file_name_;
     CoolLexer *lexer_;
     bool has_error_ = false;
 
-  public:
+public:
     ErrorPrinter(const string &file_name, CoolLexer *lexer)
         : file_name_(file_name), lexer_(lexer) {}
 
     virtual void syntaxError(Recognizer *recognizer, Token *offendingSymbol,
                              size_t line, size_t charPositionInLine,
                              const std::string &msg,
-                             std::exception_ptr e) override {
+                             std::exception_ptr e) override
+    {
         has_error_ = true;
         cout << '"' << file_name_ << "\", line " << line
              << ": syntax error at or near "
@@ -132,8 +193,10 @@ class ErrorPrinter : public BaseErrorListener {
     bool has_error() const { return has_error_; }
 };
 
-int main(int argc, const char *argv[]) {
-    if (argc != 2) {
+int main(int argc, const char *argv[])
+{
+    if (argc != 2)
+    {
         cerr << "Expecting exactly one argument: name of input file" << endl;
         return 1;
     }
@@ -159,9 +222,12 @@ int main(int argc, const char *argv[]) {
     parser.program();
     parser.reset();
 
-    if (!error_printer.has_error()) {
+    if (!error_printer.has_error())
+    {
         TreePrinter(&lexer, &parser, file_name).print();
-    } else {
+    }
+    else
+    {
         cout << "Compilation halted due to lex and parse errors" << endl;
     }
 
