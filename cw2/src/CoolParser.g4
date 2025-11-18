@@ -10,6 +10,11 @@ feature: attribute | method;
 
 attribute: OBJECTID':' TYPEID ';' ;
 
-method: OBJECTID'('')'':' TYPEID '{' expresion '}' ';' ;
+method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
-expresion: OBJECTID ;
+formal: OBJECTID':' TYPEID;
+
+expresion: assign | object ;
+
+assign: OBJECTID ASSIGN object;
+object: OBJECTID;

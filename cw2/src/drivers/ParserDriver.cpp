@@ -175,13 +175,28 @@ public:
         printLine("_method");
         this->increaseIndent();
         printLine(ctx->OBJECTID()->getText());
+
+        for (auto f : ctx->formal())
+        {
+            visit(f);
+        }
+
         printLine(ctx->TYPEID()->getText());
 
-        visitChildren(ctx);
+        visit(ctx->expresion());
 
-        // todo move
-        printLine(": _no_type");
+        this->decreaseIndent();
 
+        return any{};
+    }
+
+    any visitFormal(CoolParser::FormalContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_formal");
+        this->increaseIndent();
+        printLine(ctx->OBJECTID()->getText());
+        printLine(ctx->TYPEID()->getText());
         this->decreaseIndent();
 
         return any{};
@@ -189,11 +204,31 @@ public:
 
     any visitExpresion(CoolParser::ExpresionContext *ctx) override
     {
+        visitChildren(ctx);
+        return any{};
+    }
+
+    any visitObject(CoolParser::ObjectContext *ctx) override
+    {
         printRow(ctx->getStop()->getLine());
         printLine("_object");
         this->increaseIndent();
         printLine(ctx->OBJECTID()->getText());
         this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitAssign(CoolParser::AssignContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_assign");
+        this->increaseIndent();
+        printLine(ctx->OBJECTID()->getText());
+        visit(ctx->object());
+        this->decreaseIndent();
+        printLine(": _no_type");
 
         return any{};
     }
