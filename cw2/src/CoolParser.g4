@@ -16,9 +16,14 @@ formal: OBJECTID':' TYPEID;
 
 expresion: equal | assign;
 
-equal: mathExpresion ('=' mathExpresion)*;
+equal: greatness (equalOperant greatness)*;
+equalOperant: '=';
 
-unaryValue: neg | atom;
+greatness: mathExpresion (greatnessOperant mathExpresion )*;
+greatnessOperant: '<' | '<=';
+
+
+unaryValue: neg | isvoid | new | atom;
 
 atom: int | string | bool | object | staticDispatch | dispatch | block | letIn | condition | while | typcase | '(' expresion ')';
 
@@ -59,3 +64,7 @@ multiplicationOperant: '*' | '/';
 
 
 neg: '~''(' expresion ')';
+
+new: NEW TYPEID;
+
+isvoid: ISVOID unaryValue;

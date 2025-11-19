@@ -236,6 +236,30 @@ public:
         return any{};
     }
 
+    any visitNew(CoolParser::NewContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_new");
+        this->increaseIndent();
+        printLine(ctx->TYPEID()->getText());
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitIsvoid(CoolParser::IsvoidContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_isvoid");
+        this->increaseIndent();
+        visit(ctx->unaryValue());
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
     any visitString(CoolParser::StringContext *ctx) override
     {
         printRow(ctx->getStop()->getLine());
@@ -382,6 +406,42 @@ public:
     any visitEqual(CoolParser::EqualContext *ctx) override
     {
 
+        auto greatness = ctx->greatness();
+
+        if (greatness.size() == 1)
+        {
+            visit(greatness[0]);
+            return any{};
+        }
+
+        auto ops = ctx->equalOperant();
+        for (auto op : ops)
+        {
+            printRow(ctx->getStop()->getLine());
+            printLine("_eq");
+
+            this->increaseIndent();
+        }
+
+        size_t countExpr = 0;
+        for (auto greate : greatness)
+        {
+            visit(greate);
+
+            countExpr++;
+            if (countExpr >= 2)
+            {
+                this->decreaseIndent();
+                printLine(": _no_type");
+            }
+        }
+
+        return any{};
+    }
+
+    any visitGreatness(CoolParser::GreatnessContext *ctx) override
+    {
+
         auto mathExpresions = ctx->mathExpresion();
 
         if (mathExpresions.size() == 1)
@@ -390,15 +450,34 @@ public:
             return any{};
         }
 
-        printRow(ctx->getStop()->getLine());
-        printLine("_eq");
-        this->increaseIndent();
-        for (auto expr : ctx->mathExpresion())
+        auto ops = ctx->greatnessOperant();
+        reverse(ops.begin(), ops.end());
+        for (auto op : ops)
+        {
+            printRow(ctx->getStop()->getLine());
+            if (op->getText() == "<")
+            {
+                printLine("_lt");
+            }
+            else
+            {
+                printLine("_le");
+            }
+            this->increaseIndent();
+        }
+
+        size_t countExpr = 0;
+        for (auto expr : mathExpresions)
         {
             visit(expr);
+
+            countExpr++;
+            if (countExpr >= 2)
+            {
+                this->decreaseIndent();
+                printLine(": _no_type");
+            }
         }
-        this->decreaseIndent();
-        printLine(": _no_type");
 
         return any{};
     }
