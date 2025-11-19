@@ -259,7 +259,7 @@ public:
         printRow(ctx->getStop()->getLine());
         printLine("_bool");
         this->increaseIndent();
-        printLine(ctx->BOOL_CONST()->getText());
+        printLine(ctx->BOOL_CONST()->getText() == "false" ? "0" : "1");
         this->decreaseIndent();
         printLine(": _no_type");
 
