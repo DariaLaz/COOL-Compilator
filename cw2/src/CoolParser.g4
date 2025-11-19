@@ -16,10 +16,9 @@ formal: OBJECTID':' TYPEID;
 
 expresion: equal | assign;
 
-equal: greatness (equalOperant greatness)*;
-equalOperant: '=';
+equal: greatness ('=' greatness)?;
 
-greatness: mathExpresion (greatnessOperant mathExpresion )*;
+greatness: mathExpresion (greatnessOperant mathExpresion )?;
 greatnessOperant: '<' | '<=';
 
 

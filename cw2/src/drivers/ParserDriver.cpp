@@ -421,27 +421,17 @@ public:
             return any{};
         }
 
-        auto ops = ctx->equalOperant();
-        for (auto op : ops)
-        {
-            printRow(ctx->getStop()->getLine());
-            printLine("_eq");
+        printRow(ctx->getStop()->getLine());
+        printLine("_eq");
+        this->increaseIndent();
 
-            this->increaseIndent();
-        }
-
-        size_t countExpr = 0;
         for (auto greate : greatness)
         {
             visit(greate);
-
-            countExpr++;
-            if (countExpr >= 2)
-            {
-                this->decreaseIndent();
-                printLine(": _no_type");
-            }
         }
+
+        this->decreaseIndent();
+        printLine(": _no_type");
 
         return any{};
     }
@@ -457,34 +447,27 @@ public:
             return any{};
         }
 
-        auto ops = ctx->greatnessOperant();
-        reverse(ops.begin(), ops.end());
-        for (auto op : ops)
+        auto op = ctx->greatnessOperant();
+
+        printRow(ctx->getStop()->getLine());
+        if (op->getText() == "<")
         {
-            printRow(ctx->getStop()->getLine());
-            if (op->getText() == "<")
-            {
-                printLine("_lt");
-            }
-            else
-            {
-                printLine("_le");
-            }
-            this->increaseIndent();
+            printLine("_lt");
+        }
+        else
+        {
+            printLine("_le");
         }
 
-        size_t countExpr = 0;
+        this->increaseIndent();
+
         for (auto expr : mathExpresions)
         {
             visit(expr);
-
-            countExpr++;
-            if (countExpr >= 2)
-            {
-                this->decreaseIndent();
-                printLine(": _no_type");
-            }
         }
+
+        this->decreaseIndent();
+        printLine(": _no_type");
 
         return any{};
     }
