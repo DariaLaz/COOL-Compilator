@@ -14,7 +14,13 @@ method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
 formal: OBJECTID':' TYPEID;
 
-expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | typcase | mathExpresion | neg | object ;
+expresion: equal | assign;
+
+equal: mathExpresion ('=' mathExpresion)*;
+
+unaryValue: neg | atom;
+
+atom: int | string | bool | object | staticDispatch | dispatch | block | letIn | condition | while | typcase | '(' expresion ')';
 
 assign: OBJECTID ASSIGN expresion;
 object: OBJECTID;
@@ -25,9 +31,9 @@ dispatch: OBJECTID'('(argument (',' argument)*)?')';
 
 argument: expresion;
 
-condition: IF object THEN object ELSE object FI;
+condition: IF expresion THEN expresion ELSE expresion FI;
 
-while: WHILE object LOOP object POOL;
+while: WHILE expresion LOOP expresion POOL;
 
 block: '{' (expresion';')+ '}';
 
@@ -48,9 +54,8 @@ mathExpresion: additionExpresion;
 additionExpresion: multiplicationExpresion (additionOperant multiplicationExpresion)*;
 additionOperant: '+' | '-';
 
-multiplicationExpresion: mathAtom (multiplicationOperant mathAtom)*;
+multiplicationExpresion: unaryValue (multiplicationOperant unaryValue)*;
 multiplicationOperant: '*' | '/';
 
-mathAtom:  int | object | letIn | block | dispatch | staticDispatch | condition | while | typcase | '(' expresion ')';
 
-neg: '~''(' mathAtom ')';
+neg: '~''(' expresion ')';

@@ -83,7 +83,7 @@ private:
     CoolParser *parser_;
     string file_name_;
     int indent = 0;
-    bool debug = false;
+    bool debug = true;
 
     void increaseIndent()
     {
@@ -260,7 +260,7 @@ public:
         printRow(ctx->getStop()->getLine());
         printLine("_neg");
         this->increaseIndent();
-        visit(ctx->mathAtom());
+        visit(ctx->expresion());
         this->decreaseIndent();
         printLine(": _no_type");
 
@@ -348,7 +348,7 @@ public:
         printRow(ctx->getStop()->getLine());
         printLine("_cond");
         this->increaseIndent();
-        for (auto o : ctx->object())
+        for (auto o : ctx->expresion())
         {
             visit(o);
         }
@@ -363,9 +363,33 @@ public:
         printRow(ctx->getStop()->getLine());
         printLine("_loop");
         this->increaseIndent();
-        for (auto o : ctx->object())
+        for (auto o : ctx->expresion())
         {
             visit(o);
+        }
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitEqual(CoolParser::EqualContext *ctx) override
+    {
+
+        auto mathExpresions = ctx->mathExpresion();
+
+        if (mathExpresions.size() == 1)
+        {
+            visit(mathExpresions[0]);
+            return any{};
+        }
+
+        printRow(ctx->getStop()->getLine());
+        printLine("_eq");
+        this->increaseIndent();
+        for (auto expr : ctx->mathExpresion())
+        {
+            visit(expr);
         }
         this->decreaseIndent();
         printLine(": _no_type");
@@ -394,14 +418,22 @@ public:
 
         for (auto arg : ctx->letInArg())
         {
-            size_t row = ctx->getStop()->getLine();
-            printRow(row);
+            printRow(ctx->getStop()->getLine());
             printLine("_let");
             this->increaseIndent();
             printLine(arg->OBJECTID()->getText());
             printLine(arg->TYPEID()->getText());
 
-            visitAssignExpresion(arg->assignExpresion(), row);
+            if (arg->assignExpresion())
+            {
+                visit(arg->assignExpresion()->expresion());
+            }
+            else
+            {
+                printRow(ctx->getStop()->getLine());
+                printLine("_no_expr");
+                printLine(": _no_type");
+            }
         }
 
         visit(ctx->expresion());
@@ -410,22 +442,6 @@ public:
         {
 
             this->decreaseIndent();
-            printLine(": _no_type");
-        }
-
-        return any{};
-    }
-
-    any visitAssignExpresion(CoolParser::AssignExpresionContext *ctx, size_t row)
-    {
-        if (ctx)
-        {
-            visit(ctx);
-        }
-        else
-        {
-            printRow(row);
-            printLine("_no_expr");
             printLine(": _no_type");
         }
 
@@ -512,7 +528,7 @@ public:
         }
 
         size_t countExpr = 0;
-        for (auto atom : ctx->mathAtom())
+        for (auto atom : ctx->unaryValue())
         {
             visit(atom);
             countExpr++;
