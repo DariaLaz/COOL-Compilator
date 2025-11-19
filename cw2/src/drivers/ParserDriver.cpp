@@ -357,12 +357,17 @@ public:
 
     any visitDispatch(CoolParser::DispatchContext *ctx) override
     {
-        printRow(ctx->getStop()->getLine());
-        printLine("_dispatch");
-        this->increaseIndent();
-        if (ctx->object())
+        auto dispBodies = ctx->dispatchBody();
+        for (auto d : dispBodies)
         {
-            visit(ctx->object());
+            printRow(ctx->getStop()->getLine());
+            printLine("_dispatch");
+            this->increaseIndent();
+        }
+
+        if (ctx->dispatchObj())
+        {
+            visit(ctx->dispatchObj());
         }
         else
         {
@@ -376,17 +381,20 @@ public:
         }
 
         // fn
-        printLine(ctx->OBJECTID()->getText());
-
-        printLine("(");
-        for (auto a : ctx->argument())
+        for (auto d : dispBodies)
         {
-            visit(a);
-        }
-        printLine(")");
+            printLine(d->OBJECTID()->getText());
 
-        this->decreaseIndent();
-        printLine(": _no_type");
+            printLine("(");
+            for (auto a : d->argument())
+            {
+                visit(a);
+            }
+            printLine(")");
+
+            this->decreaseIndent();
+            printLine(": _no_type");
+        }
 
         return any{};
     }

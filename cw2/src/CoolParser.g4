@@ -36,7 +36,9 @@ object: OBJECTID;
 
 staticDispatch: object'@'TYPEID'.'OBJECTID'('(argument (',' argument)*)?')';
 
-dispatch: (object '.')? OBJECTID'('(argument (',' argument)*)?')';
+dispatch: (dispatchObj '.')? dispatchBody ('.' dispatchBody)*;
+dispatchBody: OBJECTID'('(argument (',' argument)*)?')';
+dispatchObj: string | object;
 
 argument: expresion;
 
