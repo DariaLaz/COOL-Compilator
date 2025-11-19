@@ -233,6 +233,28 @@ public:
         return any{};
     }
 
+    any visitStaticDispatch(CoolParser::StaticDispatchContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_static_dispatch");
+        this->increaseIndent();
+        visit(ctx->object());
+        printLine(ctx->TYPEID()->getText());
+        printLine(ctx->OBJECTID()->getText());
+
+        printLine("(");
+        for (auto a : ctx->argument())
+        {
+            visit(a);
+        }
+        printLine(")");
+
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
 public:
     void print() { visitProgram(parser_->program()); }
 };

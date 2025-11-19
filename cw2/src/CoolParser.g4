@@ -14,7 +14,11 @@ method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
 formal: OBJECTID':' TYPEID;
 
-expresion: assign | object ;
+expresion: assign | staticDispatch | object ;
 
 assign: OBJECTID ASSIGN object;
 object: OBJECTID;
+
+staticDispatch: object'@'TYPEID'.'OBJECTID'('(argument (',' argument)*)?')';
+
+argument: object;

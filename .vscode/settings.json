@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "*.pl": "prolog",
+    "format": "cpp",
+    "variant": "cpp"
+  }
+}
