@@ -16,14 +16,14 @@ formal: OBJECTID':' TYPEID;
 
 expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | typcase | mathExpresion | object ;
 
-assign: OBJECTID ASSIGN object;
+assign: OBJECTID ASSIGN expresion;
 object: OBJECTID;
 
 staticDispatch: object'@'TYPEID'.'OBJECTID'('(argument (',' argument)*)?')';
 
 dispatch: OBJECTID'('(argument (',' argument)*)?')';
 
-argument: object;
+argument: expresion;
 
 condition: IF object THEN object ELSE object FI;
 
@@ -31,11 +31,10 @@ while: WHILE object LOOP object POOL;
 
 block: '{' (expresion';')+ '}';
 
-letIn: LET letInArg (',' letInArg)* IN var;
+letIn: LET letInArg (',' letInArg)* IN expresion;
 letInArg: OBJECTID ':' TYPEID (assignExpresion)?;
-assignExpresion: ASSIGN var;
+assignExpresion: ASSIGN expresion;
 
-var: string | int | bool | object;
 
 string: STR_CONST;
 int: INT_CONST;
@@ -52,4 +51,4 @@ additionOperant: '+' | '-';
 multiplicationExpresion: mathAtom (multiplicationOperant mathAtom)*;
 multiplicationOperant: '*' | '/';
 
-mathAtom: int;
+mathAtom:  int | object | letIn | block | dispatch | staticDispatch | condition | while | typcase | '(' expresion ')';

@@ -272,7 +272,7 @@ public:
         printLine("_assign");
         this->increaseIndent();
         printLine(ctx->OBJECTID()->getText());
-        visit(ctx->object());
+        visit(ctx->expresion());
         this->decreaseIndent();
         printLine(": _no_type");
 
@@ -391,7 +391,7 @@ public:
             visitAssignExpresion(arg->assignExpresion(), row);
         }
 
-        visit(ctx->var());
+        visit(ctx->expresion());
 
         for (int i = 0; i < argsCount; i++)
         {
