@@ -546,7 +546,7 @@ public:
         printRow(ctx->getStop()->getLine());
         printLine("_typcase");
         this->increaseIndent();
-        visit(ctx->object());
+        visit(ctx->expresion());
 
         for (auto branch : ctx->typcaseBranch())
         {
@@ -556,7 +556,7 @@ public:
 
             printLine(branch->OBJECTID()->getText());
             printLine(branch->TYPEID()->getText());
-            visit(branch->object());
+            visit(branch->expresion());
 
             this->decreaseIndent();
         }

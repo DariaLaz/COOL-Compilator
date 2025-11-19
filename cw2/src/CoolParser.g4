@@ -51,8 +51,8 @@ string: STR_CONST;
 int: INT_CONST;
 bool: BOOL_CONST;
 
-typcase: CASE object OF (typcaseBranch)+ ESAC;
-typcaseBranch: OBJECTID ':' TYPEID DARROW object ';';
+typcase: CASE expresion OF (typcaseBranch)+ ESAC;
+typcaseBranch: OBJECTID ':' TYPEID DARROW expresion ';';
 
 mathExpresion: additionExpresion;
 
