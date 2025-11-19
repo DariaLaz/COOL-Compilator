@@ -32,7 +32,7 @@ object: OBJECTID;
 
 staticDispatch: object'@'TYPEID'.'OBJECTID'('(argument (',' argument)*)?')';
 
-dispatch: OBJECTID'('(argument (',' argument)*)?')';
+dispatch: (object '.')? OBJECTID'('(argument (',' argument)*)?')';
 
 argument: expresion;
 

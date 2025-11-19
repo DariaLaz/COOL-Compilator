@@ -349,13 +349,20 @@ public:
         printRow(ctx->getStop()->getLine());
         printLine("_dispatch");
         this->increaseIndent();
-        // self
-        printRow(ctx->getStop()->getLine());
-        printLine("_object");
-        this->increaseIndent();
-        printLine("self");
-        this->decreaseIndent();
-        printLine(": _no_type");
+        if (ctx->object())
+        {
+            visit(ctx->object());
+        }
+        else
+        {
+            // self
+            printRow(ctx->getStop()->getLine());
+            printLine("_object");
+            this->increaseIndent();
+            printLine("self");
+            this->decreaseIndent();
+            printLine(": _no_type");
+        }
 
         // fn
         printLine(ctx->OBJECTID()->getText());
