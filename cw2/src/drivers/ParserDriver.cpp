@@ -423,12 +423,9 @@ public:
 
     any visitEqual(CoolParser::EqualContext *ctx) override
     {
-
-        auto greatness = ctx->greatness();
-
-        if (greatness.size() == 1)
+        if (ctx->greatness())
         {
-            visit(greatness[0]);
+            visit(ctx->greatness());
             return any{};
         }
 
@@ -436,9 +433,9 @@ public:
         printLine("_eq");
         this->increaseIndent();
 
-        for (auto greate : greatness)
+        for (auto expr : ctx->mathExpresion())
         {
-            visit(greate);
+            visit(expr);
         }
 
         this->decreaseIndent();
