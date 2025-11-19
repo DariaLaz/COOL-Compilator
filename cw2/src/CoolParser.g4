@@ -22,7 +22,12 @@ greatness: mathExpresion (greatnessOperant mathExpresion )?;
 greatnessOperant: '<' | '<=';
 
 
-unaryValue: neg | isvoid | new | atom;
+unaryValue: neg | isvoid | new | not | atom;
+
+neg: '~' unaryValue;
+new: NEW TYPEID;
+isvoid: ISVOID unaryValue;
+not: NOT greatness;
 
 atom: int | string | bool | object | staticDispatch | dispatch | block | letIn | condition | while | typcase | '(' expresion ')';
 
@@ -45,7 +50,6 @@ letIn: LET letInArg (',' letInArg)* IN expresion;
 letInArg: OBJECTID ':' TYPEID (assignExpresion)?;
 assignExpresion: ASSIGN expresion;
 
-
 string: STR_CONST;
 int: INT_CONST;
 bool: BOOL_CONST;
@@ -60,10 +64,3 @@ additionOperant: '+' | '-';
 
 multiplicationExpresion: unaryValue (multiplicationOperant unaryValue)*;
 multiplicationOperant: '*' | '/';
-
-
-neg: '~''(' expresion ')';
-
-new: NEW TYPEID;
-
-isvoid: ISVOID unaryValue;

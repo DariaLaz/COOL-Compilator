@@ -284,13 +284,24 @@ public:
         return any{};
     }
 
-    // TODO fix this not good for strings
     any visitNeg(CoolParser::NegContext *ctx) override
     {
         printRow(ctx->getStop()->getLine());
         printLine("_neg");
         this->increaseIndent();
-        visit(ctx->expresion());
+        visit(ctx->unaryValue());
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitNot(CoolParser::NotContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_comp");
+        this->increaseIndent();
+        visit(ctx->greatness());
         this->decreaseIndent();
         printLine(": _no_type");
 
