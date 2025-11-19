@@ -31,8 +31,15 @@ while: WHILE object LOOP object POOL;
 
 block: '{' (expresion';')+ '}';
 
-letIn: LET letInArg (',' letInArg)* IN object;
-letInArg: OBJECTID ':' TYPEID;
+letIn: LET letInArg (',' letInArg)* IN var;
+letInArg: OBJECTID ':' TYPEID (assignExpresion)?;
+assignExpresion: ASSIGN var;
+
+var: string | int | bool | object;
+
+string: STR_CONST;
+int: INT_CONST;
+bool: BOOL_CONST;
 
 typcase: CASE object OF (typcaseBranch)+ ESAC;
 typcaseBranch: OBJECTID ':' TYPEID DARROW object ';';

@@ -230,6 +230,42 @@ public:
         return any{};
     }
 
+    any visitString(CoolParser::StringContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_string");
+        this->increaseIndent();
+        printLine(ctx->STR_CONST()->getText());
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitInt(CoolParser::IntContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_int");
+        this->increaseIndent();
+        printLine(ctx->INT_CONST()->getText());
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitBool(CoolParser::BoolContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_bool");
+        this->increaseIndent();
+        printLine(ctx->BOOL_CONST()->getText());
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
     any visitAssign(CoolParser::AssignContext *ctx) override
     {
         printRow(ctx->getStop()->getLine());
@@ -345,23 +381,38 @@ public:
 
         for (auto arg : ctx->letInArg())
         {
-            printRow(ctx->getStop()->getLine());
+            size_t row = ctx->getStop()->getLine();
+            printRow(row);
             printLine("_let");
             this->increaseIndent();
             printLine(arg->OBJECTID()->getText());
             printLine(arg->TYPEID()->getText());
-            // todo
-            printRow(arg->getStop()->getLine());
-            printLine("_no_expr");
-            printLine(": _no_type");
+
+            visitAssignExpresion(arg->assignExpresion(), row);
         }
 
-        visit(ctx->object());
+        visit(ctx->var());
 
         for (int i = 0; i < argsCount; i++)
         {
 
             this->decreaseIndent();
+            printLine(": _no_type");
+        }
+
+        return any{};
+    }
+
+    any visitAssignExpresion(CoolParser::AssignExpresionContext *ctx, size_t row)
+    {
+        if (ctx)
+        {
+            visit(ctx);
+        }
+        else
+        {
+            printRow(row);
+            printLine("_no_expr");
             printLine(": _no_type");
         }
 
@@ -396,7 +447,11 @@ public:
     }
 
 public:
-    void print() { visitProgram(parser_->program()); }
+    void
+    print()
+    {
+        visitProgram(parser_->program());
+    }
 };
 
 class ErrorPrinter : public BaseErrorListener
