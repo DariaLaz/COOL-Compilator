@@ -169,10 +169,16 @@ public:
         printLine(ctx->OBJECTID()->getText());
         printLine(ctx->TYPEID()->getText());
 
-        // todo move
-        printRow(ctx->getStop()->getLine());
-        printLine("_no_expr");
-        printLine(": _no_type");
+        if (ctx->assignExpresion())
+        {
+            visit(ctx->assignExpresion()->expresion());
+        }
+        else
+        {
+            printRow(ctx->getStop()->getLine());
+            printLine("_no_expr");
+            printLine(": _no_type");
+        }
 
         this->decreaseIndent();
 
@@ -448,7 +454,7 @@ public:
         return any{};
     }
 
-        any visitTypcase(CoolParser::TypcaseContext *ctx) override
+    any visitTypcase(CoolParser::TypcaseContext *ctx) override
     {
 
         printRow(ctx->getStop()->getLine());

@@ -8,7 +8,7 @@ class: CLASS TYPEID (INHERITS TYPEID)? '{' feature* '}' ;
 
 feature: attribute | method;
 
-attribute: OBJECTID':' TYPEID ';' ;
+attribute: OBJECTID':' TYPEID (assignExpresion)?';' ;
 
 method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
