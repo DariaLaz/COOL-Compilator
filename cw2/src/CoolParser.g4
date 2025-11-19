@@ -14,7 +14,7 @@ method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
 formal: OBJECTID':' TYPEID;
 
-expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | typcase | mathExpresion | object ;
+expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | typcase | mathExpresion | neg | object ;
 
 assign: OBJECTID ASSIGN expresion;
 object: OBJECTID;
@@ -52,3 +52,5 @@ multiplicationExpresion: mathAtom (multiplicationOperant mathAtom)*;
 multiplicationOperant: '*' | '/';
 
 mathAtom:  int | object | letIn | block | dispatch | staticDispatch | condition | while | typcase | '(' expresion ')';
+
+neg: '~''(' mathAtom ')';
