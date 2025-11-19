@@ -83,7 +83,7 @@ private:
     CoolParser *parser_;
     string file_name_;
     int indent = 0;
-    bool debug = false;
+    bool debug = true;
 
     void increaseIndent()
     {
@@ -442,6 +442,70 @@ public:
 
         this->decreaseIndent();
         printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitAdditionExpresion(CoolParser::AdditionExpresionContext *ctx) override
+    {
+        for (auto op : ctx->additionOperant())
+        {
+            printRow(ctx->getStop()->getLine());
+            if (op->getText() == "+")
+            {
+                printLine("_plus");
+            }
+            else
+            {
+                printLine("_sub");
+            }
+            this->increaseIndent();
+        }
+
+        size_t countExpr = 0;
+        for (auto mult : ctx->multiplicationExpresion())
+        {
+            visit(mult);
+            countExpr++;
+
+            if (countExpr >= 2)
+            {
+                this->decreaseIndent();
+                printLine(": _no_type");
+            }
+        }
+
+        return any{};
+    }
+
+    any visitMultiplicationExpresion(CoolParser::MultiplicationExpresionContext *ctx) override
+    {
+        for (auto op : ctx->multiplicationOperant())
+        {
+            printRow(ctx->getStop()->getLine());
+            if (op->getText() == "*")
+            {
+                printLine("_mul");
+            }
+            else
+            {
+                printLine("_divide");
+            }
+            this->increaseIndent();
+        }
+
+        size_t countExpr = 0;
+        for (auto atom : ctx->mathAtom())
+        {
+            visit(atom);
+            countExpr++;
+
+            if (countExpr >= 2)
+            {
+                this->decreaseIndent();
+                printLine(": _no_type");
+            }
+        }
 
         return any{};
     }

@@ -14,7 +14,7 @@ method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
 formal: OBJECTID':' TYPEID;
 
-expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | typcase | object ;
+expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | typcase | mathExpresion | object ;
 
 assign: OBJECTID ASSIGN object;
 object: OBJECTID;
@@ -43,3 +43,13 @@ bool: BOOL_CONST;
 
 typcase: CASE object OF (typcaseBranch)+ ESAC;
 typcaseBranch: OBJECTID ':' TYPEID DARROW object ';';
+
+mathExpresion: additionExpresion;
+
+additionExpresion: multiplicationExpresion (additionOperant multiplicationExpresion)*;
+additionOperant: '+' | '-';
+
+multiplicationExpresion: mathAtom (multiplicationOperant mathAtom)*;
+multiplicationOperant: '*' | '/';
+
+mathAtom: int;
