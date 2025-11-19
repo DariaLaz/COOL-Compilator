@@ -314,6 +314,50 @@ public:
         return any{};
     }
 
+    any visitBlock(CoolParser::BlockContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_block");
+        this->increaseIndent();
+        for (auto e : ctx->expresion())
+        {
+            visit(e);
+        }
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
+    any visitLetIn(CoolParser::LetInContext *ctx) override
+    {
+        int argsCount = ctx->letInArg().size();
+
+        for (auto arg : ctx->letInArg())
+        {
+            printRow(ctx->getStop()->getLine());
+            printLine("_let");
+            this->increaseIndent();
+            printLine(arg->OBJECTID()->getText());
+            printLine(arg->TYPEID()->getText());
+            // todo
+            printRow(arg->getStop()->getLine());
+            printLine("_no_expr");
+            printLine(": _no_type");
+        }
+
+        visit(ctx->object());
+
+        for (int i = 0; i < argsCount; i++)
+        {
+
+            this->decreaseIndent();
+            printLine(": _no_type");
+        }
+
+        return any{};
+    }
+
 public:
     void print() { visitProgram(parser_->program()); }
 };
