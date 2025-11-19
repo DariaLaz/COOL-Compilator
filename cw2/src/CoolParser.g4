@@ -14,7 +14,7 @@ method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
 formal: OBJECTID':' TYPEID;
 
-expresion: assign | staticDispatch | dispatch | condition | object ;
+expresion: assign | staticDispatch | dispatch | condition | while | object ;
 
 assign: OBJECTID ASSIGN object;
 object: OBJECTID;
@@ -26,3 +26,5 @@ dispatch: OBJECTID'('(argument (',' argument)*)?')';
 argument: object;
 
 condition: IF object THEN object ELSE object FI;
+
+while: WHILE object LOOP object POOL;

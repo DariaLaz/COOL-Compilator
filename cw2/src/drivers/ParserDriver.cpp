@@ -299,6 +299,21 @@ public:
         return any{};
     }
 
+    any visitWhile(CoolParser::WhileContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_loop");
+        this->increaseIndent();
+        for (auto o : ctx->object())
+        {
+            visit(o);
+        }
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
 public:
     void print() { visitProgram(parser_->program()); }
 };
