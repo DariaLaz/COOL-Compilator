@@ -255,6 +255,35 @@ public:
         return any{};
     }
 
+    any visitDispatch(CoolParser::DispatchContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_dispatch");
+        this->increaseIndent();
+        // self
+        printRow(ctx->getStop()->getLine());
+        printLine("_object");
+        this->increaseIndent();
+        printLine("self");
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        // fn
+        printLine(ctx->OBJECTID()->getText());
+
+        printLine("(");
+        for (auto a : ctx->argument())
+        {
+            visit(a);
+        }
+        printLine(")");
+
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
 public:
     void print() { visitProgram(parser_->program()); }
 };
