@@ -83,7 +83,7 @@ private:
     CoolParser *parser_;
     string file_name_;
     int indent = 0;
-    bool debug = true;
+    bool debug = false;
 
     void increaseIndent()
     {
@@ -430,7 +430,7 @@ public:
             }
             else
             {
-                printRow(ctx->getStop()->getLine());
+                printRow(arg->getStop()->getLine());
                 printLine("_no_expr");
                 printLine(": _no_type");
             }
@@ -448,7 +448,7 @@ public:
         return any{};
     }
 
-    any visitTypcase(CoolParser::TypcaseContext *ctx) override
+        any visitTypcase(CoolParser::TypcaseContext *ctx) override
     {
 
         printRow(ctx->getStop()->getLine());
