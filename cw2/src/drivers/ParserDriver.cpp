@@ -358,6 +358,33 @@ public:
         return any{};
     }
 
+    any visitTypcase(CoolParser::TypcaseContext *ctx) override
+    {
+
+        printRow(ctx->getStop()->getLine());
+        printLine("_typcase");
+        this->increaseIndent();
+        visit(ctx->object());
+
+        for (auto branch : ctx->typcaseBranch())
+        {
+            printRow(branch->getStop()->getLine());
+            printLine("_branch");
+            this->increaseIndent();
+
+            printLine(branch->OBJECTID()->getText());
+            printLine(branch->TYPEID()->getText());
+            visit(branch->object());
+
+            this->decreaseIndent();
+        }
+
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
 public:
     void print() { visitProgram(parser_->program()); }
 };

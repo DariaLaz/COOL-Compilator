@@ -14,7 +14,7 @@ method: OBJECTID'('(formal (',' formal)*)?')'':' TYPEID '{' expresion '}' ';' ;
 
 formal: OBJECTID':' TYPEID;
 
-expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | object ;
+expresion: assign | staticDispatch | dispatch | condition | while | block | letIn | typcase | object ;
 
 assign: OBJECTID ASSIGN object;
 object: OBJECTID;
@@ -33,3 +33,6 @@ block: '{' (expresion';')+ '}';
 
 letIn: LET letInArg (',' letInArg)* IN object;
 letInArg: OBJECTID ':' TYPEID;
+
+typcase: CASE object OF (typcaseBranch)+ ESAC;
+typcaseBranch: OBJECTID ':' TYPEID DARROW object ';';
