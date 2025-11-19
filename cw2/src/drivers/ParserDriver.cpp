@@ -83,7 +83,7 @@ private:
     CoolParser *parser_;
     string file_name_;
     int indent = 0;
-    bool debug = true;
+    bool debug = false;
 
     void increaseIndent()
     {
@@ -448,7 +448,9 @@ public:
 
     any visitAdditionExpresion(CoolParser::AdditionExpresionContext *ctx) override
     {
-        for (auto op : ctx->additionOperant())
+        auto ops = ctx->additionOperant();
+        reverse(ops.begin(), ops.end());
+        for (auto op : ops)
         {
             printRow(ctx->getStop()->getLine());
             if (op->getText() == "+")
@@ -480,7 +482,9 @@ public:
 
     any visitMultiplicationExpresion(CoolParser::MultiplicationExpresionContext *ctx) override
     {
-        for (auto op : ctx->multiplicationOperant())
+        auto ops = ctx->multiplicationOperant();
+        reverse(ops.begin(), ops.end());
+        for (auto op : ops)
         {
             printRow(ctx->getStop()->getLine());
             if (op->getText() == "*")
