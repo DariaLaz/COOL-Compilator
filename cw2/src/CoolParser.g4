@@ -4,7 +4,7 @@ options { tokenVocab=CoolLexer; }
 
 program: (class ';')+ ;
 
-class: CLASS TYPEID '{' feature* '}' ;
+class: CLASS TYPEID (INHERITS TYPEID)? '{' feature* '}' ;
 
 feature: attribute | method;
 

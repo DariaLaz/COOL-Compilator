@@ -134,8 +134,18 @@ public:
         printRow(ctx->getStop()->getLine());
         printLine("_class");
         this->increaseIndent();
-        printLine(ctx->TYPEID()->getText());
-        printLine("Object");
+        int count = 0;
+        for (auto className : ctx->TYPEID())
+        {
+            printLine(className->getText());
+            count++;
+        }
+
+        if (count == 1)
+        {
+            printLine("Object");
+        }
+
         printLine("\"" + file_name_ + '"');
         printLine("(");
         visitChildren(ctx);
