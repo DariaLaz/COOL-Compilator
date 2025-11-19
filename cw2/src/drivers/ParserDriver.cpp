@@ -284,6 +284,21 @@ public:
         return any{};
     }
 
+    any visitCondition(CoolParser::ConditionContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_cond");
+        this->increaseIndent();
+        for (auto o : ctx->object())
+        {
+            visit(o);
+        }
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        return any{};
+    }
+
 public:
     void print() { visitProgram(parser_->program()); }
 };
