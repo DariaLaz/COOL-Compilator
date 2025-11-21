@@ -29,16 +29,16 @@ new: NEW TYPEID;
 isvoid: ISVOID unaryValue;
 not: NOT greatness;
 
-atom: int | string | bool | object | staticDispatch | dispatch | block | letIn | condition | while | typcase | '(' expresion ')';
+atom: atomWithoutDispatchRec ('.' dispatchBody)*;
+atomWithoutDispatchRec: int | string | bool | object | staticDispatch | dispatch | block | letIn | condition | while | typcase | '(' expresion ')';
 
 assign: OBJECTID ASSIGN expresion;
 object: OBJECTID;
 
 staticDispatch: object'@'TYPEID'.'OBJECTID'('(argument (',' argument)*)?')';
 
-dispatch: (dispatchObj '.')? dispatchBody ('.' dispatchBody)*;
+dispatch: dispatchBody;
 dispatchBody: OBJECTID'('(argument (',' argument)*)?')';
-dispatchObj: string | object | new | '('dispatchObj ')' ;
 
 argument: expresion;
 

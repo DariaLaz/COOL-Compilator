@@ -355,7 +355,7 @@ public:
         return any{};
     }
 
-    any visitDispatch(CoolParser::DispatchContext *ctx) override
+    any visitAtom(CoolParser::AtomContext *ctx) override
     {
         auto dispBodies = ctx->dispatchBody();
         for (auto d : dispBodies)
@@ -365,20 +365,7 @@ public:
             this->increaseIndent();
         }
 
-        if (ctx->dispatchObj())
-        {
-            visit(ctx->dispatchObj());
-        }
-        else
-        {
-            // self
-            printRow(ctx->getStop()->getLine());
-            printLine("_object");
-            this->increaseIndent();
-            printLine("self");
-            this->decreaseIndent();
-            printLine(": _no_type");
-        }
+        visit(ctx->atomWithoutDispatchRec());
 
         // fn
         for (auto d : dispBodies)
@@ -395,6 +382,35 @@ public:
             this->decreaseIndent();
             printLine(": _no_type");
         }
+
+        return any{};
+    }
+
+    any visitDispatch(CoolParser::DispatchContext *ctx) override
+    {
+        printRow(ctx->getStop()->getLine());
+        printLine("_dispatch");
+        this->increaseIndent();
+
+        printRow(ctx->getStop()->getLine());
+        printLine("_object");
+        this->increaseIndent();
+        printLine("self");
+        this->decreaseIndent();
+        printLine(": _no_type");
+
+        auto d = ctx->dispatchBody();
+        printLine(d->OBJECTID()->getText());
+
+        printLine("(");
+        for (auto a : d->argument())
+        {
+            visit(a);
+        }
+        printLine(")");
+
+        this->decreaseIndent();
+        printLine(": _no_type");
 
         return any{};
     }
