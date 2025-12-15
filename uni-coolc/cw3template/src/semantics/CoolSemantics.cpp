@@ -34,6 +34,12 @@ void detectDuplicateMethods(
     vector<string> &classesInOrder,
     vector<string> &errors);
 
+void detectMethodOverrideErrors(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    unordered_map<string, string> &parent,
+    vector<string> &classesInOrder,
+    vector<string> &errors);
+
 // Runs semantic analysis and returns a list of errors, if any.
 //
 // TODO: change the type from void * to your typed AST type
@@ -63,6 +69,7 @@ expected<void *, vector<string>> CoolSemantics::run()
     }
 
     detectDuplicateMethods(classes, classesInOrder, errors);
+    detectMethodOverrideErrors(classes, parent, classesInOrder, errors);
 
     parser_->reset();
     for (const auto &error : TypeChecker().check(parser_))
@@ -236,10 +243,6 @@ void detectDuplicateMethods(
 {
     for (const auto &clsName : classesInOrder)
     {
-        if (!classes.count(clsName))
-        {
-            continue;
-        }
         auto *cls = classes.at(clsName);
         unordered_set<string> seen;
 
@@ -252,6 +255,69 @@ void detectDuplicateMethods(
                     "Method `" + name + "` already defined for class `" + clsName + "`");
             }
             seen.insert(name);
+        }
+    }
+}
+
+// override errors
+
+void detectMethodOverrideErrors(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    unordered_map<string, string> &parent,
+    vector<string> &classesInOrder,
+    vector<string> &errors)
+{
+    for (const auto &clsName : classesInOrder)
+    {
+        auto *cls = classes.at(clsName);
+
+        for (auto *method : cls->method())
+        {
+            string methodName = method->OBJECTID()->getText();
+            vector<string> argTypes;
+            for (auto *formal : method->formal())
+            {
+                argTypes.push_back(formal->TYPEID()->getText());
+            }
+            string returnType = method->TYPEID()->getText();
+
+            string current = parent.at(clsName);
+            while (current != "Object" && classes.count(current))
+            {
+                auto *p = classes.at(current);
+                bool foundMethod = false;
+                for (auto *pm : p->method())
+                {
+                    if (pm->OBJECTID()->getText() == methodName)
+                    {
+                        vector<string> parentArgs;
+                        for (auto *f : pm->formal())
+                        {
+                            parentArgs.push_back(f->TYPEID()->getText());
+                        }
+                        string parentReturn = pm->TYPEID()->getText();
+
+                        if (argTypes != parentArgs || returnType != parentReturn)
+                        {
+                            errors.push_back(
+                                "Override for method " + methodName +
+                                " in class " + clsName +
+                                " has different signature than method in ancestor " +
+                                current + " (earliest ancestor that mismatches)");
+                            return;
+                        }
+                        foundMethod = true;
+                        break;
+                    }
+                }
+
+                if (foundMethod)
+                {
+                    break;
+                }
+
+                current = parent.at(current);
+            }
         }
     }
 }
