@@ -10,24 +10,23 @@ temp_dir="${project_root}/temp"
 mkdir -p "${temp_dir}"
 
 # first argument: verbose or input
-verbose=""  # set to "true" to enable verbose mode
-input=""    # filter of test names by prefix
-if [ -n "${1:-}" ]; then
-    if [ "${1:-}" == "verbose" ]; then
-        verbose=true
-    else
-        input="$1"
-        if [ -n "${2:-}" ]; then
-            if [ "${2:-}" == "verbose" ]; then
-                verbose=true
-            else
-                echo "Error: second argument can only be 'verbose'"
-                echo "Usage: $0 [input|prefix] [verbose]"
-                exit 1
-            fi
-        fi
-    fi
-fi
+verbose=""
+input=""
+silent=""
+
+for arg in "$@"; do
+    case "$arg" in
+        verbose)
+            verbose=true
+            ;;
+        -s)
+            silent=true
+            ;;
+        *)
+            input="$arg"
+            ;;
+    esac
+done
 
 run_diff() {
     local out_path="$1"
@@ -59,9 +58,21 @@ run_test() {
 
     if ! diff_output=$(run_diff "${out_path}" "${sol_path}"); then
         echo "Test ${testname} FAILED"
-        if [[ -n "${verbose}" ]]; then
-            echo "diff is"
+
+        if [[ -z "$silent" ]]; then
+            echo "=============================="
+            echo "-------- INPUT --------"
+            cat "${in_path}"
+            echo
+            echo "------ YOUR OUTPUT ------"
+            cat "${sol_path}"
+            echo
+            echo "---- EXPECTED OUTPUT ----"
+            cat "${out_path}"
+            echo
+            echo "--------- DIFF ---------"
             echo "${diff_output}"
+            echo "=============================="
         fi
     else
         echo "Test ${testname} PASSED"
@@ -69,9 +80,11 @@ run_test() {
     fi
 }
 
-# === Test counters ===
+
+# === Counters ===
 total_tests=0
 passed_tests=0
+failed_tests=0
 
 if [ -z "$input" ]; then
     for input in "${tests_dir}"/*.in; do
@@ -82,18 +95,20 @@ else
         run_test "${input}"
     else
         matches=( "${tests_dir}/${input}"*.in )
-
         if [ -e "${matches[0]}" ]; then
             for file in "${matches[@]}"; do
                 run_test "${file}"
             done
         else
             echo "Error: '${input}' is not a valid file name or prefix"
-            echo "Usage: $0 [input|prefix] [verbose]"
             exit 1
         fi
     fi
 fi
 
 echo
-echo "Total ${passed_tests} out of ${total_tests} tests PASSED"
+if [ "$failed_tests" -eq 0 ]; then
+    echo "✅ ALL TESTS PASSED (${passed_tests}/${total_tests})"
+else
+    echo "❌ ${failed_tests} TESTS FAILED (${passed_tests}/${total_tests} PASSED)"
+fi
