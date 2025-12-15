@@ -29,6 +29,11 @@ vector<pair<string, string>> detectInheritanceUndefinedClass(
 
 void print_inheritance_undefined_error(vector<std::string> &errors, vector<pair<string, string>> &inheritance_undefined);
 
+void detectDuplicateMethods(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    vector<string> &classesInOrder,
+    vector<string> &errors);
+
 // Runs semantic analysis and returns a list of errors, if any.
 //
 // TODO: change the type from void * to your typed AST type
@@ -36,21 +41,12 @@ expected<void *, vector<string>> CoolSemantics::run()
 {
     vector<string> errors;
 
-    // collect classes
     unordered_map<string, CoolParser::ClassContext *> classes;
     vector<string> classesInOrder;
     unordered_map<string, string> parent;
 
-    // build inheritance graph
     auto *program = parser_->program();
     collectClasses(program, classes, parent, classesInOrder);
-    parser_->reset();
-
-    // check inheritance graph is a tree
-
-    // collect features
-
-    // check methods are overridden correctly
 
     auto loops = detectInheritanceLoops(parent, classesInOrder);
     if (!loops.empty())
@@ -58,13 +54,17 @@ expected<void *, vector<string>> CoolSemantics::run()
         errors.push_back(print_inheritance_loops_error(loops));
     }
 
-    auto undefinedClasses = detectInheritanceUndefinedClass(parent, classes, classesInOrder);
+    auto undefinedClasses =
+        detectInheritanceUndefinedClass(parent, classes, classesInOrder);
 
     if (!undefinedClasses.empty())
     {
         print_inheritance_undefined_error(errors, undefinedClasses);
     }
 
+    detectDuplicateMethods(classes, classesInOrder, errors);
+
+    parser_->reset();
     for (const auto &error : TypeChecker().check(parser_))
     {
         errors.push_back(error);
@@ -75,7 +75,6 @@ expected<void *, vector<string>> CoolSemantics::run()
         return unexpected(errors);
     }
 
-    // return the typed AST
     return nullptr;
 }
 
@@ -225,5 +224,35 @@ void print_inheritance_undefined_error(vector<std::string> &errors, vector<pair<
     {
         auto p = inheritance_undefined[i];
         errors.push_back(p.first + " inherits from undefined class " + p.second);
+    }
+}
+
+// duplicated methods
+
+void detectDuplicateMethods(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    vector<string> &classesInOrder,
+    vector<string> &errors)
+{
+    for (const auto &clsName : classesInOrder)
+    {
+        if (!classes.count(clsName))
+        {
+            continue;
+        }
+        auto *cls = classes.at(clsName);
+        unordered_set<string> seen;
+
+        for (auto *method : cls->method())
+        {
+            string name = method->OBJECTID()->getText();
+            if (seen.count(name))
+            {
+                errors.push_back(
+                    "Method `" + name + "` already defined for class `" + clsName + "`");
+                return;
+            }
+            seen.insert(name);
+        }
     }
 }
