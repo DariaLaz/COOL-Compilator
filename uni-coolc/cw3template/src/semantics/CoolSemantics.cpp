@@ -21,6 +21,14 @@ void collectClasses(
 
 vector<vector<string>> detectInheritanceLoops(
     const unordered_map<string, string> &parent, vector<string> &classesInOrder);
+
+vector<pair<string, string>> detectInheritanceUndefinedClass(
+    const unordered_map<string, string> &parent,
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    vector<string> &classesInOrder);
+
+void print_inheritance_undefined_error(vector<std::string> &errors, vector<pair<string, string>> &inheritance_undefined);
+
 // Runs semantic analysis and returns a list of errors, if any.
 //
 // TODO: change the type from void * to your typed AST type
@@ -48,6 +56,13 @@ expected<void *, vector<string>> CoolSemantics::run()
     if (!loops.empty())
     {
         errors.push_back(print_inheritance_loops_error(loops));
+    }
+
+    auto undefinedClasses = detectInheritanceUndefinedClass(parent, classes, classesInOrder);
+
+    if (!undefinedClasses.empty())
+    {
+        print_inheritance_undefined_error(errors, undefinedClasses);
     }
 
     for (const auto &error : TypeChecker().check(parser_))
@@ -95,8 +110,7 @@ void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, C
     }
 }
 
-// inheritance_loops_error
-
+// inheritance loops error
 vector<vector<string>> detectInheritanceLoops(
     const unordered_map<string, string> &parent, vector<string> &classesInOrder)
 {
@@ -170,4 +184,46 @@ string print_inheritance_loops_error(vector<vector<string>> inheritance_loops)
     }
 
     return eout.str();
+}
+
+// inheritance undefined class error
+vector<pair<string, string>> detectInheritanceUndefinedClass(
+    const unordered_map<string, string> &parent,
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    vector<string> &classesInOrder)
+{
+    vector<pair<string, string>> undefinedClasses;
+    unordered_set<string> globallyVisited;
+
+    for (const auto cls : classesInOrder)
+    {
+        string current = cls;
+
+        while (parent.count(current))
+        {
+            if (globallyVisited.count(current))
+            {
+                break;
+            }
+            auto p = parent.at(current);
+
+            if (!classes.count(p) && p != "Object")
+            {
+                undefinedClasses.push_back({current, p});
+            }
+            globallyVisited.insert(current);
+            current = p;
+        }
+    }
+
+    return undefinedClasses;
+}
+
+void print_inheritance_undefined_error(vector<std::string> &errors, vector<pair<string, string>> &inheritance_undefined)
+{
+    for (int i = 0; i < inheritance_undefined.size(); ++i)
+    {
+        auto p = inheritance_undefined[i];
+        errors.push_back(p.first + " inherits from undefined class " + p.second);
+    }
 }
