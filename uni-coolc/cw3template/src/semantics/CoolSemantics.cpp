@@ -16,10 +16,11 @@ string print_inheritance_loops_error(vector<vector<string>> inheritance_loops);
 void collectClasses(
     CoolParser::ProgramContext *program,
     unordered_map<string, CoolParser::ClassContext *> &classes,
-    unordered_map<string, string> &parent);
+    unordered_map<string, string> &parent,
+    vector<string> &classesInOrder);
 
 vector<vector<string>> detectInheritanceLoops(
-    const unordered_map<string, string> &parent);
+    const unordered_map<string, string> &parent, vector<string> &classesInOrder);
 // Runs semantic analysis and returns a list of errors, if any.
 //
 // TODO: change the type from void * to your typed AST type
@@ -29,11 +30,12 @@ expected<void *, vector<string>> CoolSemantics::run()
 
     // collect classes
     unordered_map<string, CoolParser::ClassContext *> classes;
+    vector<string> classesInOrder;
     unordered_map<string, string> parent;
 
     // build inheritance graph
     auto *program = parser_->program();
-    collectClasses(program, classes, parent);
+    collectClasses(program, classes, parent, classesInOrder);
     parser_->reset();
 
     // check inheritance graph is a tree
@@ -42,7 +44,7 @@ expected<void *, vector<string>> CoolSemantics::run()
 
     // check methods are overridden correctly
 
-    auto loops = detectInheritanceLoops(parent);
+    auto loops = detectInheritanceLoops(parent, classesInOrder);
     if (!loops.empty())
     {
         errors.push_back(print_inheritance_loops_error(loops));
@@ -65,7 +67,7 @@ expected<void *, vector<string>> CoolSemantics::run()
 // utils
 
 void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, CoolParser::ClassContext *> &classes,
-                    unordered_map<string, string> &parent)
+                    unordered_map<string, string> &parent, vector<string> &classesInOrder)
 {
 
     for (auto *cls : program->class_())
@@ -79,6 +81,7 @@ void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, C
         // }
 
         classes[className] = cls;
+        classesInOrder.push_back(className);
 
         if (cls->TYPEID().size() > 1)
         {
@@ -95,13 +98,13 @@ void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, C
 // inheritance_loops_error
 
 vector<vector<string>> detectInheritanceLoops(
-    const unordered_map<string, string> &parent)
+    const unordered_map<string, string> &parent, vector<string> &classesInOrder)
 {
     vector<vector<string>> loops;
     unordered_set<string> globallyVisited;
     unordered_set<string> loopsVisited;
 
-    for (const auto &[cls, _] : parent)
+    for (const auto cls : classesInOrder)
     {
         if (globallyVisited.count(cls))
         {
@@ -135,7 +138,6 @@ vector<vector<string>> detectInheritanceLoops(
                     break;
                 }
 
-                reverse(loop.begin(), loop.end());
                 loops.push_back(loop);
                 break;
             }
