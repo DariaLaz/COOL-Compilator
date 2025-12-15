@@ -250,7 +250,6 @@ void detectDuplicateMethods(
             {
                 errors.push_back(
                     "Method `" + name + "` already defined for class `" + clsName + "`");
-                return;
             }
             seen.insert(name);
         }
