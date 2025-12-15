@@ -99,6 +99,7 @@ vector<vector<string>> detectInheritanceLoops(
 {
     vector<vector<string>> loops;
     unordered_set<string> globallyVisited;
+    unordered_set<string> loopsVisited;
 
     for (const auto &[cls, _] : parent)
     {
@@ -116,10 +117,22 @@ vector<vector<string>> detectInheritanceLoops(
         {
             if (indexInPath.count(current))
             {
+                bool isAlreadyIn = false;
                 vector<string> loop;
                 for (int i = indexInPath[current]; i < path.size(); ++i)
                 {
+                    if (loopsVisited.count(path[i]))
+                    {
+                        isAlreadyIn = true;
+                        break;
+                    }
                     loop.push_back(path[i]);
+                    loopsVisited.insert(path[i]);
+                }
+
+                if (isAlreadyIn)
+                {
+                    break;
                 }
 
                 reverse(loop.begin(), loop.end());
