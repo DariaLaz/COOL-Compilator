@@ -22,11 +22,18 @@ std::any TypeChecker::visitClass(CoolParser::ClassContext *ctx)
     collectAttributes(ctx);
 
     methodReturnTypes[current_class].clear();
+    methodParamTypes[current_class].clear();
     for (auto *m : ctx->method())
     {
         string name = m->OBJECTID()->getText();
         string returnT = m->TYPEID()->getText();
         methodReturnTypes[current_class][name] = returnT;
+
+        vector<string> params;
+        for (auto *f : m->formal())
+            params.push_back(f->TYPEID()->getText());
+
+        methodParamTypes[current_class][name] = params;
     }
 
     return visitChildren(ctx);
@@ -177,7 +184,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
     }
 
     // method dispatch
-    if (ctx->expr().size() == 1 && ctx->OBJECTID().size() == 1 && ctx->TYPEID().empty())
+    if (ctx->expr().size() >= 1 && ctx->OBJECTID().size() >= 1 && ctx->TYPEID().empty())
     {
         auto anyRhsType = visit(ctx->expr(0));
         if (!anyRhsType.has_value() || anyRhsType.type() != typeid(string))
@@ -189,11 +196,65 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         std::string cls =
             rhsType == "SELF_TYPE" ? current_class : rhsType;
 
+        vector<string> argTypes;
+        if (ctx->expr(1))
+            for (auto *e : ctx->expr(1)->expr())
+                argTypes.push_back(any_cast<string>(visit(e)));
+
         while (cls != "Object")
         {
             if (methodReturnTypes.count(cls) &&
                 methodReturnTypes[cls].count(methodName))
             {
+                if (methodParamTypes.count(cls) &&
+                    methodParamTypes[cls].count(methodName))
+                {
+                    auto &params = methodParamTypes[cls][methodName];
+                    if (params.size() != argTypes.size())
+                    {
+                        errors.push_back(
+                            "Method `" + methodName + "` of type `" + cls +
+                            "` called with the wrong number of arguments; " +
+                            to_string(params.size()) + " arguments expected, but " +
+                            to_string(argTypes.size()) + " provided");
+                        return std::any{std::string{"__ERROR"}};
+                    }
+
+                    for (size_t i = 0; i < params.size(); ++i)
+                    {
+                        auto argAny = visit(ctx->expr(i + 1));
+                        if (!argAny.has_value() || argAny.type() != typeid(string))
+                            continue;
+
+                        string actualArgType = any_cast<string>(argAny);
+                        string expectedType = params[i];
+
+                        string t = actualArgType == "SELF_TYPE" ? current_class : actualArgType;
+                        bool isSubtype = false;
+
+                        while (true)
+                        {
+                            if (t == expectedType)
+                            {
+                                isSubtype = true;
+                                break;
+                            }
+                            if (!parent.count(t))
+                                break;
+                            t = parent.at(t);
+                        }
+
+                        if (!isSubtype)
+                        {
+                            errors.push_back(
+                                "Invalid call to method `" + methodName + "` from class `" + cls + "`:\n  `" +
+                                actualArgType + "` is not a subtype of `" + expectedType +
+                                "`: argument at position " + to_string(i) +
+                                " (0-indexed) has the wrong type");
+                        }
+                    }
+                }
+
                 std::string returnT = methodReturnTypes[cls][methodName];
                 if (returnT == "SELF_TYPE")
                 {
@@ -211,19 +272,63 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             cls = parent.at(cls);
         }
 
-        errors.push_back(
-            "Method `" + methodName + "` not defined for type `" + current_class +
-            "` in dynamic dispatch");
+        std::string initCls =
+            rhsType == "SELF_TYPE" ? current_class : rhsType;
+
+        if (initCls != "__ERROR")
+            errors.push_back(
+                "Method `" + methodName + "` not defined for type `" + initCls +
+                "` in dynamic dispatch");
 
         return std::any{std::string{"__ERROR"}};
     }
 
     // static dispatch
-    if (ctx->expr().size() == 1 && ctx->OBJECTID().size() == 1 && ctx->TYPEID().size() == 1)
+    if (ctx->expr().size() >= 1 && ctx->OBJECTID().size() >= 1 && ctx->TYPEID().size() == 1)
     {
+
+        auto anyRhsType = visit(ctx->expr(0));
+        if (!anyRhsType.has_value() || anyRhsType.type() != typeid(string))
+            return std::any{std::string{"__ERROR"}};
+        std::string rhsType = any_cast<string>(anyRhsType);
+        std::string actualCls =
+            rhsType == "SELF_TYPE" ? current_class : rhsType;
 
         string staticType = ctx->TYPEID(0)->getText();
         string methodName = ctx->OBJECTID(0)->getText();
+
+        if (staticType != "Int" && staticType != "Bool" && staticType != "String" && staticType != "Object" && !classes.count(staticType))
+        {
+            errors.push_back(
+                "Undefined type `" + staticType + "` in static method dispatch");
+
+            if (!methodReturnTypes[actualCls].count(methodName))
+                errors.push_back(
+                    "Method `" + methodName + "` not defined for type `" +
+                    actualCls + "` in static dispatch");
+
+            return std::any{std::string{"__ERROR"}};
+        }
+
+        bool isSubtype = false;
+        std::string t = actualCls;
+        while (true)
+        {
+            if (t == staticType)
+            {
+                isSubtype = true;
+                break;
+            }
+            if (!parent.count(t))
+                break;
+            t = parent.at(t);
+        }
+
+        if (!isSubtype)
+        {
+            errors.push_back(
+                "`" + actualCls + "` is not a subtype of `" + staticType + "`");
+        }
 
         string cls = staticType;
 
@@ -233,6 +338,63 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             if (methodReturnTypes.count(cls) &&
                 methodReturnTypes[cls].count(methodName))
             {
+
+                auto &params = methodParamTypes[cls][methodName];
+
+                vector<string> argTypes;
+                for (size_t i = 1; i < ctx->expr().size(); ++i)
+                {
+                    auto a = visit(ctx->expr(i));
+                    if (a.has_value() && a.type() == typeid(string))
+                        argTypes.push_back(any_cast<string>(a));
+                }
+
+                if (params.size() != argTypes.size())
+                {
+                    errors.push_back(
+                        "Method `" + methodName + "` of type `" + cls +
+                        "` called with the wrong number of arguments; " +
+                        to_string(params.size()) +
+                        " arguments expected, but " +
+                        to_string(argTypes.size()) + " provided");
+                    return std::any{std::string{"__ERROR"}};
+                }
+
+                for (size_t i = 0; i < params.size(); ++i)
+                {
+                    string actualArg = argTypes[i];
+                    string expected = params[i];
+
+                    string t = actualArg == "SELF_TYPE"
+                                   ? current_class
+                                   : actualArg;
+
+                    bool isSubtype = false;
+                    while (true)
+                    {
+                        if (t == expected)
+                        {
+                            isSubtype = true;
+                            break;
+                        }
+                        if (!parent.count(t))
+                            break;
+                        t = parent.at(t);
+                    }
+
+                    if (!isSubtype)
+                    {
+                        errors.push_back(
+                            "Invalid call to method `" + methodName +
+                            "` from class `" + cls + "`:\n  `" +
+                            actualArg + "` is not a subtype of `" +
+                            expected +
+                            "`: argument at position " +
+                            to_string(i) +
+                            " (0-indexed) has the wrong type");
+                    }
+                }
+
                 std::string returnT = methodReturnTypes[cls][methodName];
                 if (returnT == "SELF_TYPE")
                 {
@@ -243,6 +405,12 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
                     return std::any{returnT};
                 }
             }
+
+            if (!parent.count(cls))
+            {
+                break;
+            }
+
             cls = parent.at(cls);
         }
 
