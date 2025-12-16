@@ -72,7 +72,7 @@ expected<void *, vector<string>> CoolSemantics::run()
     detectMethodOverrideErrors(classes, parent, classesInOrder, errors);
 
     parser_->reset();
-    for (const auto &error : TypeChecker().check(parser_))
+    for (const auto &error : TypeChecker(classes, parent, classesInOrder).check(parser_))
     {
         errors.push_back(error);
     }

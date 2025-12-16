@@ -33,7 +33,13 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
     if (bodyAny.has_value() && bodyAny.type() == typeid(string))
         bodyType = any_cast<string>(bodyAny);
 
-    if (bodyType == "self" && declaredReturnType != current_class && !visitedMethods.count(methodName))
+    if (!classes.count(declaredReturnType))
+    {
+        errors.push_back("Method `" + methodName + "` in class `" + current_class + "` declared to have return type `" + declaredReturnType + "` which is undefined");
+    }
+    else
+
+        if (bodyType == "self" && declaredReturnType != current_class && !visitedMethods.count(methodName))
     {
         errors.push_back(
             "In class `" + current_class +
