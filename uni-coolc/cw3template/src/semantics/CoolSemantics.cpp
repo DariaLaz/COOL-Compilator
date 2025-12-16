@@ -295,9 +295,17 @@ void detectMethodOverrideErrors(
 
         reverse(pars.begin(), pars.end());
 
+        unordered_set<string> visitedMethods;
         for (auto *method : cls->method())
         {
             string methodName = method->OBJECTID()->getText();
+
+            if (visitedMethods.count(methodName))
+            {
+                continue;
+            }
+            visitedMethods.insert(methodName);
+
             vector<string> argTypes;
             for (auto *formal : method->formal())
             {
@@ -313,6 +321,7 @@ void detectMethodOverrideErrors(
                     continue;
                 }
                 auto *p = classes.at(cp);
+
                 for (auto *pm : p->method())
                 {
                     if (pm->OBJECTID()->getText() == methodName)
