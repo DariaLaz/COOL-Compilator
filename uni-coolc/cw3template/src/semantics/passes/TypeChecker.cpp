@@ -19,8 +19,40 @@ std::any TypeChecker::visitClass(CoolParser::ClassContext *ctx)
 {
     current_class = ctx->TYPEID(0)->getText();
     visitedMethods.clear();
-    attrTypes.clear();
+    collectAttributes(ctx);
     return visitChildren(ctx);
+}
+
+void TypeChecker::collectAttributes(CoolParser::ClassContext *ctx)
+{
+    attrTypes.clear();
+
+    for (auto *attr : ctx->attr())
+    {
+        string attrName = attr->OBJECTID()->getText();
+        string declaredType = attr->TYPEID()->getText();
+
+        if (declaredType != "Int" &&
+            declaredType != "Bool" &&
+            declaredType != "String" &&
+            declaredType != "Object" &&
+            !classes.count(declaredType))
+        {
+            errors.push_back(
+                "Attribute `" + attrName + "` in class `" + current_class +
+                "` declared to have type `" + declaredType + "` which is undefined");
+            continue;
+        }
+
+        if (attrTypes.count(attrName))
+        {
+            errors.push_back(
+                "Attribute `" + attrName + "` already defined for class `" + current_class + "`");
+            continue;
+        }
+
+        attrTypes[attrName] = declaredType;
+    }
 }
 
 std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
@@ -87,12 +119,21 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 
     if (ctx->ASSIGN())
     {
+        std::string lhsName = ctx->OBJECTID(0)->getText();
+
+        if (!attrTypes.count(lhsName))
+        {
+            errors.push_back(
+                "Assignee named `" + lhsName + "` not in scope");
+
+            return std::any{std::string{"__ERROR"}};
+        }
+
         std::string rhsType = "any";
         any anyRhsType = visit(ctx->expr(0));
         if (anyRhsType.has_value() && anyRhsType.type() == typeid(string))
             rhsType = any_cast<string>(anyRhsType);
 
-        std::string lhsName = ctx->OBJECTID(0)->getText();
         std::string lhsType = attrTypes[lhsName];
 
         if (rhsType != lhsType)
@@ -113,33 +154,35 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return std::any{std::string{"SELF_TYPE"}};
     }
 
+    if (!ctx->OBJECTID().empty())
+    {
+        std::string name = ctx->OBJECTID(0)->getText();
+
+        if (name == "self")
+            return std::any{std::string{"SELF_TYPE"}};
+
+        if (attrTypes.count(name))
+            return std::any{attrTypes[name]};
+
+        errors.push_back(
+            "Variable named `" + name + "` not in scope");
+
+        return std::any{std::string{"__ERROR"}};
+    }
+
     return visitChildren(ctx);
 }
 
 std::any TypeChecker::visitAttr(CoolParser::AttrContext *ctx)
 {
     std::string attrName = ctx->OBJECTID()->getText();
-    std::string declaredType = ctx->TYPEID()->getText();
 
-    if (declaredType != "Int" &&
-        declaredType != "Bool" &&
-        declaredType != "String" &&
-        declaredType != "Object" &&
-        !classes.count(declaredType))
+    if (!attrTypes.count(attrName))
     {
-        errors.push_back(
-            "Attribute `" + attrName + "` in class `" + current_class +
-            "` declared to have type `" + declaredType + "` which is undefined");
         return nullptr;
     }
 
-    if (attrTypes.count(attrName))
-    {
-        errors.push_back(
-            "Attribute `" + attrName + "` already defined for class `" + current_class + "`");
-        return nullptr;
-    }
-    attrTypes[attrName] = declaredType;
+    std::string declaredType = attrTypes[attrName];
 
     if (ctx->expr())
     {
@@ -147,7 +190,7 @@ std::any TypeChecker::visitAttr(CoolParser::AttrContext *ctx)
         if (initTypeAny.has_value())
         {
             std::string initType = std::any_cast<std::string>(initTypeAny);
-            if (initType != declaredType && initType != "SELF_TYPE")
+            if (initType != declaredType && initType != "SELF_TYPE" && initType != "__ERROR")
             {
                 errors.push_back(
                     "In class `" + current_class + "` attribute `" + attrName +

@@ -29,6 +29,8 @@ private:
   unordered_map<string, string> parent;
   vector<string> classesInOrder;
 
+  void collectAttributes(CoolParser::ClassContext *ctx);
+
 public:
   // TODO: add necessary dependencies to constructor
   TypeChecker(
