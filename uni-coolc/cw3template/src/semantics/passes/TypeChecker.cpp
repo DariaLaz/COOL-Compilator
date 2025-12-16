@@ -39,13 +39,35 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
     }
     else
 
-        if (bodyType == "self" && declaredReturnType != current_class && !visitedMethods.count(methodName))
+        if (bodyType == "SELF_TYPE" && !visitedMethods.count(methodName))
     {
-        errors.push_back(
-            "In class `" + current_class +
-            "` method `" + methodName +
-            "`: `SELF_TYPE` is not `" + declaredReturnType +
-            "`: type of method body is not a subtype of return type");
+        unordered_set<string> possibleSelfTypes;
+        unordered_set<string> visitedP;
+
+        possibleSelfTypes.insert(current_class);
+        possibleSelfTypes.insert("Object");
+
+        string current = parent.at(current_class);
+        while (classes.count(current))
+        {
+            if (visitedP.count(current))
+            {
+                break;
+            }
+            visitedP.insert(current);
+
+            possibleSelfTypes.insert(current);
+            current = parent.at(current);
+        }
+
+        if (!possibleSelfTypes.count(declaredReturnType))
+        {
+            errors.push_back(
+                "In class `" + current_class +
+                "` method `" + methodName +
+                "`: `SELF_TYPE` is not `" + declaredReturnType +
+                "`: type of method body is not a subtype of return type");
+        }
     }
 
     visitedMethods.insert(methodName);
@@ -57,7 +79,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 {
     if (!ctx->OBJECTID().empty() && ctx->OBJECTID(0)->getText() == "self")
     {
-        return std::any{std::string{"self"}};
+        return std::any{std::string{"SELF_TYPE"}};
     }
 
     return visitChildren(ctx);
