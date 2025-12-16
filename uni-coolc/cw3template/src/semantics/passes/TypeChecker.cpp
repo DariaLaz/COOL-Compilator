@@ -170,7 +170,34 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 
         std::string lhsType = attrTypes[lhsName];
 
-        if (rhsType != lhsType)
+        unordered_set<string> possibleSelfTypes;
+        unordered_set<string> visitedP;
+
+        possibleSelfTypes.insert(lhsType);
+        possibleSelfTypes.insert("Object");
+
+        if (parent.count(lhsType))
+        {
+
+            string current = parent.at(lhsType);
+            while (classes.count(current))
+            {
+                if (visitedP.count(current))
+                {
+                    break;
+                }
+                visitedP.insert(current);
+
+                possibleSelfTypes.insert(current);
+                if (!parent.count(current))
+                {
+                    break;
+                }
+                current = parent.at(current);
+            }
+        }
+
+        if (!possibleSelfTypes.count(rhsType))
         {
             errors.push_back(
                 "In class `" + current_class +
@@ -468,7 +495,34 @@ std::any TypeChecker::visitAttr(CoolParser::AttrContext *ctx)
         if (initTypeAny.has_value())
         {
             std::string initType = std::any_cast<std::string>(initTypeAny);
-            if (initType != declaredType && initType != "SELF_TYPE" && initType != "__ERROR")
+
+            unordered_set<string> possibleSelfTypes;
+            unordered_set<string> visitedP;
+
+            possibleSelfTypes.insert(initType);
+            possibleSelfTypes.insert("Object");
+
+            if (parent.count(initType))
+            {
+                string current = parent.at(initType);
+                while (classes.count(current))
+                {
+                    if (visitedP.count(current))
+                    {
+                        break;
+                    }
+                    visitedP.insert(current);
+
+                    possibleSelfTypes.insert(current);
+                    if (!parent.count(current))
+                    {
+                        break;
+                    }
+                    current = parent.at(current);
+                }
+            }
+
+            if (!possibleSelfTypes.count(declaredType) && initType != "SELF_TYPE" && initType != "__ERROR")
             {
                 errors.push_back(
                     "In class `" + current_class + "` attribute `" + attrName +
