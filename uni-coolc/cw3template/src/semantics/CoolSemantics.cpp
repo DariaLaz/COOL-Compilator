@@ -273,9 +273,27 @@ void detectMethodOverrideErrors(
     vector<string> &classesInOrder,
     vector<string> &errors)
 {
+    unordered_set<string> problemClasses;
     for (const auto &clsName : classesInOrder)
     {
         auto *cls = classes.at(clsName);
+
+        string current = parent.at(clsName);
+        vector<string> pars;
+        unordered_set<string> visitedP;
+        while (classes.count(current))
+        {
+            if (visitedP.count(current))
+            {
+                break;
+            }
+            visitedP.insert(current);
+
+            pars.push_back(current);
+            current = parent.at(current);
+        }
+
+        reverse(pars.begin(), pars.end());
 
         for (auto *method : cls->method())
         {
@@ -287,11 +305,14 @@ void detectMethodOverrideErrors(
             }
             string returnType = method->TYPEID()->getText();
 
-            string current = parent.at(clsName);
-            while (current != "Object" && classes.count(current))
+            bool found = false;
+            for (auto cp : pars)
             {
-                auto *p = classes.at(current);
-                bool foundMethod = false;
+                if (problemClasses.count(cp))
+                {
+                    continue;
+                }
+                auto *p = classes.at(cp);
                 for (auto *pm : p->method())
                 {
                     if (pm->OBJECTID()->getText() == methodName)
@@ -309,20 +330,16 @@ void detectMethodOverrideErrors(
                                 "Override for method " + methodName +
                                 " in class " + clsName +
                                 " has different signature than method in ancestor " +
-                                current + " (earliest ancestor that mismatches)");
-                            return;
+                                cp + " (earliest ancestor that mismatches)");
+                            problemClasses.insert(clsName);
+                            found = true;
                         }
-                        foundMethod = true;
                         break;
                     }
                 }
 
-                if (foundMethod)
-                {
+                if (found)
                     break;
-                }
-
-                current = parent.at(current);
             }
         }
     }
