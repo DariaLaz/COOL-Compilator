@@ -177,7 +177,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
     }
 
     // method dispatch
-    if (ctx->expr().size() == 1 && ctx->OBJECTID().size() == 1)
+    if (ctx->expr().size() == 1 && ctx->OBJECTID().size() == 1 && ctx->TYPEID().empty())
     {
         auto anyRhsType = visit(ctx->expr(0));
         if (!anyRhsType.has_value() || anyRhsType.type() != typeid(string))
@@ -212,7 +212,43 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         }
 
         errors.push_back(
-            "Dispatch to undefined method `" + methodName + "`");
+            "Method `" + methodName + "` not defined for type `" + current_class +
+            "` in dynamic dispatch");
+
+        return std::any{std::string{"__ERROR"}};
+    }
+
+    // static dispatch
+    if (ctx->expr().size() == 1 && ctx->OBJECTID().size() == 1 && ctx->TYPEID().size() == 1)
+    {
+
+        string staticType = ctx->TYPEID(0)->getText();
+        string methodName = ctx->OBJECTID(0)->getText();
+
+        string cls = staticType;
+
+        while (cls != "Object")
+        {
+
+            if (methodReturnTypes.count(cls) &&
+                methodReturnTypes[cls].count(methodName))
+            {
+                std::string returnT = methodReturnTypes[cls][methodName];
+                if (returnT == "SELF_TYPE")
+                {
+                    return std::any{std::string{"SELF_TYPE"}};
+                }
+                else
+                {
+                    return std::any{returnT};
+                }
+            }
+            cls = parent.at(cls);
+        }
+
+        errors.push_back(
+            "Method `" + methodName + "` not defined for type `" + staticType +
+            "` in static dispatch");
         return std::any{std::string{"__ERROR"}};
     }
 
