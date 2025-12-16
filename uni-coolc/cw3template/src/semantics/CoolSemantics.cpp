@@ -40,6 +40,11 @@ void detectMethodOverrideErrors(
     vector<string> &classesInOrder,
     vector<string> &errors);
 
+void detectMethodUndefinedArgsErrors(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    vector<string> &classesInOrder,
+    vector<string> &errors);
+
 // Runs semantic analysis and returns a list of errors, if any.
 //
 // TODO: change the type from void * to your typed AST type
@@ -70,6 +75,7 @@ expected<void *, vector<string>> CoolSemantics::run()
 
     detectDuplicateMethods(classes, classesInOrder, errors);
     detectMethodOverrideErrors(classes, parent, classesInOrder, errors);
+    detectMethodUndefinedArgsErrors(classes, classesInOrder, errors);
 
     parser_->reset();
     for (const auto &error : TypeChecker(classes, parent, classesInOrder).check(parser_))
@@ -317,6 +323,32 @@ void detectMethodOverrideErrors(
                 }
 
                 current = parent.at(current);
+            }
+        }
+    }
+}
+
+void detectMethodUndefinedArgsErrors(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    vector<string> &classesInOrder,
+    vector<string> &errors)
+{
+    for (const auto &clsName : classesInOrder)
+    {
+        auto *cls = classes.at(clsName);
+
+        for (auto *method : cls->method())
+        {
+            string methodName = method->OBJECTID()->getText();
+            for (auto *formal : method->formal())
+            {
+                auto argType = formal->TYPEID()->getText();
+
+                if (!classes.count(argType))
+                {
+                    errors.push_back("Method `" + methodName + "` in class `" + clsName + "` declared to have an argument of type `" + argType + "` which is undefined");
+                    break;
+                }
             }
         }
     }
