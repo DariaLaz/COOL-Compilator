@@ -45,6 +45,12 @@ void detectMethodUndefinedArgsErrors(
     vector<string> &classesInOrder,
     vector<string> &errors);
 
+void detectAttrOverrideErrors(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    unordered_map<string, string> &parent,
+    vector<string> &classesInOrder,
+    vector<string> &errors);
+
 // Runs semantic analysis and returns a list of errors, if any.
 //
 // TODO: change the type from void * to your typed AST type
@@ -76,6 +82,8 @@ expected<void *, vector<string>> CoolSemantics::run()
     detectDuplicateMethods(classes, classesInOrder, errors);
     detectMethodOverrideErrors(classes, parent, classesInOrder, errors);
     detectMethodUndefinedArgsErrors(classes, classesInOrder, errors);
+
+    detectAttrOverrideErrors(classes, parent, classesInOrder, errors);
 
     parser_->reset();
     for (const auto &error : TypeChecker(classes, parent, classesInOrder).check(parser_))
@@ -375,6 +383,74 @@ void detectMethodUndefinedArgsErrors(
                     errors.push_back("Method `" + methodName + "` in class `" + clsName + "` declared to have an argument of type `" + argType + "` which is undefined");
                     break;
                 }
+            }
+        }
+    }
+}
+
+void detectAttrOverrideErrors(
+    unordered_map<string, CoolParser::ClassContext *> &classes,
+    unordered_map<string, string> &parent,
+    vector<string> &classesInOrder,
+    vector<string> &errors)
+{
+    unordered_set<string> problemClasses;
+    for (const auto &clsName : classesInOrder)
+    {
+        auto *cls = classes.at(clsName);
+
+        string current = parent.at(clsName);
+        vector<string> pars;
+        unordered_set<string> visitedP;
+        while (classes.count(current))
+        {
+            if (visitedP.count(current))
+            {
+                break;
+            }
+            visitedP.insert(current);
+
+            pars.push_back(current);
+            current = parent.at(current);
+        }
+
+        reverse(pars.begin(), pars.end());
+
+        unordered_set<string> visitedAttr;
+        for (auto *attr : cls->attr())
+        {
+            string attrName = attr->OBJECTID()->getText();
+            if (visitedAttr.count(attrName))
+            {
+                continue;
+            }
+            visitedAttr.insert(attrName);
+
+            bool found = false;
+            for (auto cp : pars)
+            {
+                if (problemClasses.count(cp))
+                {
+                    continue;
+                }
+                auto *p = classes.at(cp);
+
+                for (auto *pa : p->attr())
+                {
+                    if (pa->OBJECTID()->getText() == attrName)
+                    {
+
+                        errors.push_back(
+                            "Attribute `" + attrName + "` in class `" + clsName + "` redefines attribute with the same name in ancestor `" + cp + "` (earliest ancestor that defines this attribute)");
+                        problemClasses.insert(clsName);
+                        found = true;
+
+                        break;
+                    }
+                }
+
+                if (found)
+                    break;
             }
         }
     }

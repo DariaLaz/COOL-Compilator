@@ -23,6 +23,7 @@ private:
   // define helper methods
   std::string current_class;
   std::unordered_set<std::string> visitedMethods;
+  std::unordered_map<std::string, string> attrTypes;
 
   unordered_map<string, CoolParser::ClassContext *> classes;
   unordered_map<string, string> parent;
@@ -47,6 +48,7 @@ public:
   std::any visitClass(CoolParser::ClassContext *ctx) override;
   std::any visitMethod(CoolParser::MethodContext *ctx) override;
   std::any visitExpr(CoolParser::ExprContext *ctx) override;
+  std::any visitAttr(CoolParser::AttrContext *ctx) override;
 };
 
 #endif
