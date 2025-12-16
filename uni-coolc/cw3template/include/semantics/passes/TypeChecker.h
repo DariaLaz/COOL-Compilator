@@ -23,6 +23,7 @@ private:
   // define helper methods
   std::string current_class;
   std::unordered_set<std::string> visitedMethods;
+  unordered_map<string, unordered_map<string, string>> methodReturnTypes;
   std::unordered_map<std::string, string> attrTypes;
 
   unordered_map<string, CoolParser::ClassContext *> classes;

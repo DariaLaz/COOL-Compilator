@@ -20,6 +20,15 @@ std::any TypeChecker::visitClass(CoolParser::ClassContext *ctx)
     current_class = ctx->TYPEID(0)->getText();
     visitedMethods.clear();
     collectAttributes(ctx);
+
+    methodReturnTypes[current_class].clear();
+    for (auto *m : ctx->method())
+    {
+        string name = m->OBJECTID()->getText();
+        string returnT = m->TYPEID()->getText();
+        methodReturnTypes[current_class][name] = returnT;
+    }
+
     return visitChildren(ctx);
 }
 
@@ -62,11 +71,38 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
 
     any bodyAny = visit(ctx->expr());
 
-    string bodyType = "any";
+    string bodyType = "__ERROR";
+
     if (bodyAny.has_value() && bodyAny.type() == typeid(string))
         bodyType = any_cast<string>(bodyAny);
 
-    if (!classes.count(declaredReturnType))
+    unordered_set<string> possibleSelfTypes;
+    unordered_set<string> visitedP;
+
+    possibleSelfTypes.insert(current_class);
+    possibleSelfTypes.insert("Object");
+
+    string current = parent.at(current_class);
+    while (classes.count(current))
+    {
+        if (visitedP.count(current))
+        {
+            break;
+        }
+        visitedP.insert(current);
+
+        possibleSelfTypes.insert(current);
+        current = parent.at(current);
+    }
+    // maybe use everywhere
+    bool isBuiltin =
+        declaredReturnType == "Int" ||
+        declaredReturnType == "Bool" ||
+        declaredReturnType == "String" ||
+        declaredReturnType == "Object" ||
+        declaredReturnType == "SELF_TYPE";
+
+    if (!isBuiltin && !classes.count(declaredReturnType))
     {
         errors.push_back("Method `" + methodName + "` in class `" + current_class + "` declared to have return type `" + declaredReturnType + "` which is undefined");
     }
@@ -74,25 +110,6 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
 
         if (bodyType == "SELF_TYPE" && !visitedMethods.count(methodName))
     {
-        unordered_set<string> possibleSelfTypes;
-        unordered_set<string> visitedP;
-
-        possibleSelfTypes.insert(current_class);
-        possibleSelfTypes.insert("Object");
-
-        string current = parent.at(current_class);
-        while (classes.count(current))
-        {
-            if (visitedP.count(current))
-            {
-                break;
-            }
-            visitedP.insert(current);
-
-            possibleSelfTypes.insert(current);
-            current = parent.at(current);
-        }
-
         if (!possibleSelfTypes.count(declaredReturnType))
         {
             errors.push_back(
@@ -101,6 +118,16 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
                 "`: `SELF_TYPE` is not `" + declaredReturnType +
                 "`: type of method body is not a subtype of return type");
         }
+    }
+    else if (bodyType != declaredReturnType && bodyType != "__ERROR")
+    {
+        if (bodyType != "SELF_TYPE" && !possibleSelfTypes.count(bodyType) && !possibleSelfTypes.count(declaredReturnType))
+            errors.push_back(
+                "In class `" + current_class +
+                "` method `" + methodName +
+                "`: `" + bodyType +
+                "` is not `" + declaredReturnType +
+                "`: type of method body is not a subtype of return type");
     }
 
     visitedMethods.insert(methodName);
@@ -147,6 +174,46 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         }
 
         return lhsType;
+    }
+
+    // method dispatch
+    if (ctx->expr().size() == 1 && ctx->OBJECTID().size() == 1)
+    {
+        auto anyRhsType = visit(ctx->expr(0));
+        if (!anyRhsType.has_value() || anyRhsType.type() != typeid(string))
+            return std::any{std::string{"__ERROR"}};
+
+        std::string rhsType = any_cast<string>(anyRhsType);
+        std::string methodName = ctx->OBJECTID(0)->getText();
+
+        std::string cls =
+            rhsType == "SELF_TYPE" ? current_class : rhsType;
+
+        while (cls != "Object")
+        {
+            if (methodReturnTypes.count(cls) &&
+                methodReturnTypes[cls].count(methodName))
+            {
+                std::string returnT = methodReturnTypes[cls][methodName];
+                if (returnT == "SELF_TYPE")
+                {
+                    return std::any{std::string{"SELF_TYPE"}};
+                }
+                else
+                {
+                    return std::any{returnT};
+                }
+            }
+
+            if (!parent.count(cls))
+                break;
+
+            cls = parent.at(cls);
+        }
+
+        errors.push_back(
+            "Dispatch to undefined method `" + methodName + "`");
+        return std::any{std::string{"__ERROR"}};
     }
 
     if (!ctx->OBJECTID().empty() && ctx->OBJECTID(0)->getText() == "self")
