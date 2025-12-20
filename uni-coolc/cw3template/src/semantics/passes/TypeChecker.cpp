@@ -229,6 +229,54 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return lhsType;
     }
 
+    if (ctx->IF())
+    {
+        auto condAny = visit(ctx->expr(0));
+        if (!condAny.has_value() || condAny.type() != typeid(string))
+            return std::any{std::string{"__ERROR"}};
+
+        string condType = any_cast<string>(condAny);
+        if (condType != "Bool")
+        {
+            errors.push_back(
+                "Type `" + condType +
+                "` of if-then-else-fi condition is not `Bool`");
+        }
+
+        auto thenAny = visit(ctx->expr(1));
+        auto elseAny = visit(ctx->expr(2));
+
+        if (!thenAny.has_value() || !elseAny.has_value())
+            return std::any{std::string{"__ERROR"}};
+
+        string t1 = any_cast<string>(thenAny);
+        string t2 = any_cast<string>(elseAny);
+
+        if (t1 == t2)
+            return std::any{t1};
+
+        // find he common type
+        unordered_set<string> seen;
+        string a = t1;
+        while (true)
+        {
+            seen.insert(a);
+            if (!parent.count(a))
+                break;
+            a = parent.at(a);
+        }
+
+        string b = t2;
+        while (!seen.count(b))
+        {
+            if (!parent.count(b))
+                break;
+            b = parent.at(b);
+        }
+
+        return std::any{b};
+    }
+
     // implicit dispatch
     if (ctx->OBJECTID().size() == 1 &&
         ctx->TYPEID().empty() &&
