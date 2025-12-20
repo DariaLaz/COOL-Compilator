@@ -31,7 +31,10 @@ std::any TypeChecker::visitClass(CoolParser::ClassContext *ctx)
 
         vector<string> params;
         for (auto *f : m->formal())
+        {
             params.push_back(f->TYPEID()->getText());
+            methodParam[current_class][name][f->OBJECTID()->getText()] = f->TYPEID()->getText();
+        }
 
         methodParamTypes[current_class][name] = params;
     }
@@ -75,6 +78,8 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
 {
     string methodName = ctx->OBJECTID()->getText();
     string declaredReturnType = ctx->TYPEID()->getText();
+
+    current_method = methodName;
 
     any bodyAny = visit(ctx->expr());
 
@@ -224,10 +229,94 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return lhsType;
     }
 
+    // implicit dispatch
+    if (ctx->OBJECTID().size() == 1 &&
+        ctx->TYPEID().empty() &&
+        (ctx->DOT() == nullptr && ctx->AT() == nullptr) &&
+        ctx->OPAREN() != nullptr)
+    {
+
+        std::string methodName = ctx->OBJECTID(0)->getText();
+        std::vector<std::string> argTypes;
+        argTypes.reserve(ctx->expr().size());
+        for (size_t i = 0; i < ctx->expr().size(); ++i)
+        {
+            auto a = visit(ctx->expr(i));
+            if (a.has_value() && a.type() == typeid(std::string))
+            {
+                argTypes.push_back(std::any_cast<std::string>(a));
+            }
+            else
+                argTypes.push_back("__ERROR");
+        }
+
+        std::string cls = current_class;
+
+        while (true)
+        {
+            if (methodReturnTypes.count(cls) && methodReturnTypes[cls].count(methodName))
+            {
+                auto &params = methodParamTypes[cls][methodName];
+
+                if (params.size() != argTypes.size())
+                {
+                    errors.push_back(
+                        "Method `" + methodName + "` of type `" + cls +
+                        "` called with the wrong number of arguments; " +
+                        std::to_string(params.size()) +
+                        " arguments expected, but " +
+                        std::to_string(argTypes.size()) + " provided");
+                    return std::any{std::string{"__ERROR"}};
+                }
+
+                for (size_t i = 0; i < params.size(); ++i)
+                {
+                    std::string actual = argTypes[i];
+                    std::string expected = params[i];
+
+                    std::string t = (actual == "SELF_TYPE") ? current_class : actual;
+
+                    bool isSubtype = false;
+                    while (true)
+                    {
+                        if (t == expected)
+                        {
+                            isSubtype = true;
+                            break;
+                        }
+                        if (!parent.count(t))
+                            break;
+                        t = parent.at(t);
+                    }
+
+                    if (!isSubtype)
+                    {
+                        errors.push_back(
+                            "Invalid call to method `" + methodName +
+                            "` from class `" + current_class + "`:");
+                        errors.push_back(
+                            "  `" + actual + "` is not a subtype of `" + expected +
+                            "`: argument at position " + std::to_string(i) +
+                            " (0-indexed) has the wrong type");
+                    }
+                }
+
+                std::string ret = methodReturnTypes[cls][methodName];
+                return (ret == "SELF_TYPE")
+                           ? std::any{std::string{"SELF_TYPE"}}
+                           : std::any{ret};
+            }
+
+            if (!parent.count(cls))
+                break;
+            cls = parent.at(cls);
+        }
+    }
+
     // method dispatch
     if (ctx->expr().size() >= 1 &&
         ctx->OBJECTID().size() == 1 &&
-        ctx->TYPEID().empty())
+        ctx->TYPEID().empty() && ctx->DOT() != nullptr)
     {
         auto anyRhsType = visit(ctx->expr(0));
         if (!anyRhsType.has_value() || anyRhsType.type() != typeid(string))
@@ -334,7 +423,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
     }
 
     // static dispatch
-    if (ctx->expr().size() >= 1 && ctx->OBJECTID().size() >= 1 && ctx->TYPEID().size() == 1)
+    if (ctx->expr().size() >= 1 && ctx->OBJECTID().size() >= 1 && ctx->TYPEID().size() == 1 && ctx->AT() != nullptr)
     {
 
         auto anyRhsType = visit(ctx->expr(0));
@@ -479,6 +568,9 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 
         if (name == "self")
             return std::any{std::string{"SELF_TYPE"}};
+
+        if (methodParam[current_class][current_method].count(name))
+            return std::any{methodParam[current_class][current_method][name]};
 
         if (attrTypes.count(name))
             return std::any{attrTypes[name]};

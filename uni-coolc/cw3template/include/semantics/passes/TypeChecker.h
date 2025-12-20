@@ -22,8 +22,10 @@ private:
 
   // define helper methods
   std::string current_class;
+  std::string current_method;
   std::unordered_set<std::string> visitedMethods;
   unordered_map<string, unordered_map<string, vector<string>>> methodParamTypes;
+  unordered_map<string, unordered_map<string, unordered_map<string, string>>> methodParam;
   unordered_map<string, unordered_map<string, string>> methodReturnTypes;
   std::unordered_map<std::string, string> attrTypes;
 
