@@ -113,9 +113,7 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
     {
         errors.push_back("Method `" + methodName + "` in class `" + current_class + "` declared to have return type `" + declaredReturnType + "` which is undefined");
     }
-    else
-
-        if (bodyType == "SELF_TYPE" && !visitedMethods.count(methodName))
+    else if (bodyType == "SELF_TYPE" && !visitedMethods.count(methodName))
     {
         if (!possibleSelfTypes.count(declaredReturnType))
         {
@@ -126,15 +124,31 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
                 "`: type of method body is not a subtype of return type");
         }
     }
-    else if (bodyType != declaredReturnType && bodyType != "__ERROR")
+    else if (bodyType != "__ERROR" && bodyType != "SELF_TYPE")
     {
-        if (bodyType != "SELF_TYPE" && !possibleSelfTypes.count(bodyType) && !possibleSelfTypes.count(declaredReturnType))
+        bool isSubtype = false;
+        string t = bodyType;
+        while (true)
+        {
+            if (t == declaredReturnType)
+            {
+                isSubtype = true;
+                break;
+            }
+            if (!parent.count(t))
+                break;
+            t = parent.at(t);
+        }
+
+        if (!isSubtype)
+        {
             errors.push_back(
                 "In class `" + current_class +
                 "` method `" + methodName +
                 "`: `" + bodyType +
                 "` is not `" + declaredReturnType +
                 "`: type of method body is not a subtype of return type");
+        }
     }
 
     visitedMethods.insert(methodName);
@@ -155,18 +169,18 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
     {
         std::string lhsName = ctx->OBJECTID(0)->getText();
 
+        std::string rhsType = "any";
+        any anyRhsType = visit(ctx->expr(0));
+        if (anyRhsType.has_value() && anyRhsType.type() == typeid(string))
+            rhsType = any_cast<string>(anyRhsType);
+
         if (!attrTypes.count(lhsName))
         {
             errors.push_back(
                 "Assignee named `" + lhsName + "` not in scope");
 
-            return std::any{std::string{"__ERROR"}};
+            return rhsType;
         }
-
-        std::string rhsType = "any";
-        any anyRhsType = visit(ctx->expr(0));
-        if (anyRhsType.has_value() && anyRhsType.type() == typeid(string))
-            rhsType = any_cast<string>(anyRhsType);
 
         std::string lhsType = attrTypes[lhsName];
 
