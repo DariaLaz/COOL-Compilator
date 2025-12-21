@@ -436,6 +436,20 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return any{lub};
     }
 
+    if (ctx->NEW())
+    {
+        string typeName = ctx->TYPEID(0)->getText();
+
+        if (!classes.count(typeName))
+        {
+            errors.push_back(
+                "Attempting to instantiate unknown class `" + typeName + "`");
+            return any{string{"__ERROR"}};
+        }
+
+        return any{typeName};
+    }
+
     // implicit dispatch
     if (ctx->OBJECTID().size() == 1 &&
         ctx->TYPEID().empty() &&
