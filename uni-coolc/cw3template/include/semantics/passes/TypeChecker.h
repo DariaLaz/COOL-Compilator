@@ -27,6 +27,7 @@ private:
   unordered_map<string, unordered_map<string, vector<string>>> methodParamTypes;
   unordered_map<string, unordered_map<string, string>> methodReturnTypes;
   std::unordered_map<std::string, string> attrTypes;
+  std::unordered_map<std::string, unordered_map<string, string>> attrTypesByClass;
 
   unordered_map<string, CoolParser::ClassContext *> classes;
   unordered_map<string, string> parent;
@@ -44,11 +45,12 @@ public:
   TypeChecker(
       unordered_map<string, CoolParser::ClassContext *> &classes,
       unordered_map<string, string> &parent,
-      vector<string> &classesInOrder)
+      vector<string> &classesInOrder, std::unordered_map<std::string, unordered_map<string, string>> &attrTypesByClass)
   {
     this->classes = classes;
     this->parent = parent;
     this->classesInOrder = classesInOrder;
+    this->attrTypesByClass = attrTypesByClass;
   }
 
   // Typechecks the AST that the parser produces and returns a list of errors,

@@ -17,7 +17,7 @@ void collectClasses(
     CoolParser::ProgramContext *program,
     unordered_map<string, CoolParser::ClassContext *> &classes,
     unordered_map<string, string> &parent,
-    vector<string> &classesInOrder, vector<std::string> &errors);
+    vector<string> &classesInOrder, vector<std::string> &errors, std::unordered_map<std::string, unordered_map<string, string>> &attrTypesByClass);
 
 vector<vector<string>> detectInheritanceLoops(
     const unordered_map<string, string> &parent, vector<string> &classesInOrder);
@@ -60,10 +60,12 @@ expected<void *, vector<string>> CoolSemantics::run()
 
     unordered_map<string, CoolParser::ClassContext *> classes;
     vector<string> classesInOrder;
-    unordered_map<string, string> parent;
+    std::unordered_map<std::string, unordered_map<string, string>> attrTypesByClass;
+    unordered_map<string, string>
+        parent;
 
     auto *program = parser_->program();
-    collectClasses(program, classes, parent, classesInOrder, errors);
+    collectClasses(program, classes, parent, classesInOrder, errors, attrTypesByClass);
 
     auto loops = detectInheritanceLoops(parent, classesInOrder);
     if (!loops.empty())
@@ -86,7 +88,7 @@ expected<void *, vector<string>> CoolSemantics::run()
     detectAttrOverrideErrors(classes, parent, classesInOrder, errors);
 
     parser_->reset();
-    for (const auto &error : TypeChecker(classes, parent, classesInOrder).check(parser_))
+    for (const auto &error : TypeChecker(classes, parent, classesInOrder, attrTypesByClass).check(parser_))
     {
         errors.push_back(error);
     }
@@ -102,7 +104,7 @@ expected<void *, vector<string>> CoolSemantics::run()
 // utils
 
 void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, CoolParser::ClassContext *> &classes,
-                    unordered_map<string, string> &parent, vector<string> &classesInOrder, vector<std::string> &errors)
+                    unordered_map<string, string> &parent, vector<string> &classesInOrder, vector<std::string> &errors, std::unordered_map<std::string, unordered_map<string, string>> &attrTypesByClass)
 {
 
     for (auto *cls : program->class_())
@@ -132,6 +134,24 @@ void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, C
         else
         {
             parent[className] = "Object";
+        }
+
+        for (auto *attr : cls->attr())
+        {
+            string attrName = attr->OBJECTID()->getText();
+            string declaredType = attr->TYPEID()->getText();
+
+            if (declaredType != "Int" &&
+                declaredType != "Bool" &&
+                declaredType != "String" &&
+                declaredType != "Object" &&
+                declaredType != "SELF_TYPE" &&
+                !classes.count(declaredType))
+            {
+                continue;
+            }
+
+            attrTypesByClass[className][attrName] = declaredType;
         }
     }
 }

@@ -17,6 +17,11 @@ vector<string> TypeChecker::check(CoolParser *parser)
     methodReturnTypes["String"]["substr"] = "String";
     methodParamTypes["String"]["substr"] = {"Int", "Int"};
 
+    methodReturnTypes["IO"]["doh"] = "Int";
+    methodParamTypes["IO"]["doh"] = {};
+    methodReturnTypes["IO"]["printh"] = "Int";
+    methodParamTypes["IO"]["printh"] = {};
+
     visitProgram(parser->program());
     parser->reset();
 
@@ -816,7 +821,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             t = parent.at(t);
         }
 
-        if (!isSubtype)
+        if (!isSubtype && actualCls != "__ERROR")
         {
             errors.push_back(
                 "`" + actualCls + "` is not a subtype of `" + staticType + "`");
@@ -912,10 +917,13 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 
     if (ctx->OPAREN())
     {
-        auto aa = visit(ctx->expr(0));
-        string expType = (aa.has_value() && aa.type() == typeid(string)) ? any_cast<string>(aa) : "__ERROR";
+        if (ctx->expr(0))
+        {
+            auto aa = visit(ctx->expr(0));
+            string expType = (aa.has_value() && aa.type() == typeid(string)) ? any_cast<string>(aa) : "__ERROR";
 
-        return expType;
+            return expType;
+        }
     }
 
     if (!ctx->OBJECTID().empty() && ctx->OBJECTID(0)->getText() == "self")
@@ -933,6 +941,18 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         string t;
         if (lookVarInAllScopes(name, t))
             return any{t};
+
+        t = current_class;
+        while (true)
+        {
+            if (attrTypesByClass[t].count(name))
+            {
+                return any{attrTypesByClass[t][name]};
+            }
+            if (!parent.count(t))
+                break;
+            t = parent.at(t);
+        }
 
         errors.push_back(
             "Variable named `" + name + "` not in scope");
