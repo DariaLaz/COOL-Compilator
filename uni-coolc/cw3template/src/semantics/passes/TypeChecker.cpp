@@ -22,6 +22,9 @@ vector<string> TypeChecker::check(CoolParser *parser)
     methodReturnTypes["IO"]["printh"] = "Int";
     methodParamTypes["IO"]["printh"] = {};
 
+    methodReturnTypes["Object"]["abort"] = "Object";
+    methodParamTypes["Object"]["abort"] = {};
+
     visitProgram(parser->program());
     parser->reset();
 
@@ -34,23 +37,6 @@ std::any TypeChecker::visitClass(CoolParser::ClassContext *ctx)
     visitedMethods.clear();
     pushScope();
     collectAttributes(ctx);
-
-    methodReturnTypes[current_class].clear();
-    methodParamTypes[current_class].clear();
-    for (auto *m : ctx->method())
-    {
-        string name = m->OBJECTID()->getText();
-        string returnT = m->TYPEID()->getText();
-        methodReturnTypes[current_class][name] = returnT;
-
-        vector<string> params;
-        for (auto *f : m->formal())
-        {
-            params.push_back(f->TYPEID()->getText());
-        }
-
-        methodParamTypes[current_class][name] = params;
-    }
 
     auto c = visitChildren(ctx);
     popScope();
@@ -301,15 +287,14 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         if (anyRhsType.has_value() && anyRhsType.type() == typeid(string))
             rhsType = any_cast<string>(anyRhsType);
 
-        if (!attrTypes.count(lhsName))
+        string lhsType;
+        if (!lookVarInAllScopes(lhsName, lhsType))
         {
             errors.push_back(
                 "Assignee named `" + lhsName + "` not in scope");
 
             return rhsType;
         }
-
-        std::string lhsType = attrTypes[lhsName];
 
         unordered_set<string> possibleSelfTypes;
         unordered_set<string> visitedP;
