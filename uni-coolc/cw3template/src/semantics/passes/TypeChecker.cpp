@@ -179,9 +179,32 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
     if (ctx->BOOL_CONST())
         return std::any{std::string{"Bool"}};
 
+    if (ctx->PLUS() || ctx->MINUS() || ctx->STAR() || ctx->SLASH())
+    {
+        auto lAny = visit(ctx->expr(0));
+        auto rAny = visit(ctx->expr(1));
+
+        string l = (lAny.has_value() && lAny.type() == typeid(string)) ? any_cast<string>(lAny) : "__ERROR";
+        string r = (rAny.has_value() && rAny.type() == typeid(string)) ? any_cast<string>(rAny) : "__ERROR";
+
+        if (l != "Int")
+        {
+            errors.push_back(
+                "Left-hand-side of arithmetic expression is not of type `Int`, but of type `" + l + "`");
+        }
+
+        if (r != "Int")
+        {
+            errors.push_back(
+                "Right-hand-side of arithmetic expression is not of type `Int`, but of type `" + r + "`");
+        }
+
+        return any{string{"Int"}};
+    }
+
     if (ctx->ASSIGN())
     {
-        std::string lhsName = ctx->OBJECTID(0)->getText();
+        string lhsName = ctx->OBJECTID(0)->getText();
 
         std::string rhsType = "any";
         any anyRhsType = visit(ctx->expr(0));
