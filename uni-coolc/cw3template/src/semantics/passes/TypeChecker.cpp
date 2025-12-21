@@ -19,6 +19,7 @@ std::any TypeChecker::visitClass(CoolParser::ClassContext *ctx)
 {
     current_class = ctx->TYPEID(0)->getText();
     visitedMethods.clear();
+    pushScope();
     collectAttributes(ctx);
 
     methodReturnTypes[current_class].clear();
@@ -33,13 +34,15 @@ std::any TypeChecker::visitClass(CoolParser::ClassContext *ctx)
         for (auto *f : m->formal())
         {
             params.push_back(f->TYPEID()->getText());
-            methodParam[current_class][name][f->OBJECTID()->getText()] = f->TYPEID()->getText();
         }
 
         methodParamTypes[current_class][name] = params;
     }
 
-    return visitChildren(ctx);
+    auto c = visitChildren(ctx);
+    popScope();
+
+    return c;
 }
 
 void TypeChecker::collectAttributes(CoolParser::ClassContext *ctx)
@@ -71,6 +74,7 @@ void TypeChecker::collectAttributes(CoolParser::ClassContext *ctx)
         }
 
         attrTypes[attrName] = declaredType;
+        scopes.back()[attrName] = declaredType;
     }
 }
 
@@ -78,6 +82,10 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
 {
     string methodName = ctx->OBJECTID()->getText();
     string declaredReturnType = ctx->TYPEID()->getText();
+
+    pushScope();
+    for (auto *f : ctx->formal())
+        scopes.back()[f->OBJECTID()->getText()] = f->TYPEID()->getText();
 
     current_method = methodName;
 
@@ -158,6 +166,7 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
 
     visitedMethods.insert(methodName);
 
+    popScope();
     return nullptr;
 }
 
@@ -274,7 +283,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             b = parent.at(b);
         }
 
-        return std::any{b};
+        return any{b};
     }
 
     if (ctx->WHILE())
@@ -301,7 +310,24 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         }
 
         visit(ctx->expr(1));
-        return std::any{std::string{"Object"}};
+        return any{string{"Object"}};
+    }
+
+    if (ctx->LET())
+    {
+        pushScope();
+        for (auto *v : ctx->vardecl())
+        {
+            string n = v->OBJECTID()->getText();
+            string t = v->TYPEID()->getText();
+            scopes.back()[n] = t;
+            if (v->expr())
+                visit(v->expr());
+        }
+        auto r = visit(ctx->expr().back());
+        popScope();
+
+        return r;
     }
 
     // implicit dispatch
@@ -644,11 +670,9 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         if (name == "self")
             return std::any{std::string{"SELF_TYPE"}};
 
-        if (methodParam[current_class][current_method].count(name))
-            return std::any{methodParam[current_class][current_method][name]};
-
-        if (attrTypes.count(name))
-            return std::any{attrTypes[name]};
+        string t;
+        if (lookVarInAllScopes(name, t))
+            return any{t};
 
         errors.push_back(
             "Variable named `" + name + "` not in scope");
@@ -714,4 +738,20 @@ std::any TypeChecker::visitAttr(CoolParser::AttrContext *ctx)
     }
 
     return nullptr;
+}
+
+void TypeChecker::pushScope() { scopes.push_back({}); }
+void TypeChecker::popScope() { scopes.pop_back(); }
+
+bool TypeChecker::lookVarInAllScopes(string &name, string &out)
+{
+    for (int i = scopes.size() - 1; i >= 0; --i)
+    {
+        if (scopes[i].count(name))
+        {
+            out = scopes[i][name];
+            return true;
+        }
+    }
+    return false;
 }

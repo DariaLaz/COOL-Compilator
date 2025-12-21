@@ -25,7 +25,6 @@ private:
   std::string current_method;
   std::unordered_set<std::string> visitedMethods;
   unordered_map<string, unordered_map<string, vector<string>>> methodParamTypes;
-  unordered_map<string, unordered_map<string, unordered_map<string, string>>> methodParam;
   unordered_map<string, unordered_map<string, string>> methodReturnTypes;
   std::unordered_map<std::string, string> attrTypes;
 
@@ -34,6 +33,11 @@ private:
   vector<string> classesInOrder;
 
   void collectAttributes(CoolParser::ClassContext *ctx);
+
+  vector<unordered_map<string, string>> scopes;
+  void pushScope();
+  void popScope();
+  bool lookVarInAllScopes(string &name, string &out);
 
 public:
   // TODO: add necessary dependencies to constructor
