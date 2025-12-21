@@ -85,7 +85,15 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
 
     pushScope();
     for (auto *f : ctx->formal())
+    {
+        string tt = f->TYPEID()->getText();
+        if (tt == "SELF_TYPE")
+        {
+            popScope();
+            return any{string{"__ERROR"}};
+        }
         scopes.back()[f->OBJECTID()->getText()] = f->TYPEID()->getText();
+    }
 
     current_method = methodName;
 
