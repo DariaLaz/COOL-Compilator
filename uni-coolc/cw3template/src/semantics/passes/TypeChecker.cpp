@@ -277,6 +277,33 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return std::any{b};
     }
 
+    if (ctx->WHILE())
+    {
+        auto cond = any_cast<string>(visit(ctx->expr(0)));
+        bool isSubtype = false;
+        auto t = cond;
+        while (true)
+        {
+            if (t == "Bool")
+            {
+                isSubtype = true;
+                break;
+            }
+            if (!parent.count(t))
+                break;
+            t = parent.at(t);
+        }
+        if (!isSubtype)
+        {
+            errors.push_back(
+                "Type `" + cond +
+                "` of while-loop-pool condition is not `Bool`");
+        }
+
+        visit(ctx->expr(1));
+        return std::any{std::string{"Object"}};
+    }
+
     // implicit dispatch
     if (ctx->OBJECTID().size() == 1 &&
         ctx->TYPEID().empty() &&
