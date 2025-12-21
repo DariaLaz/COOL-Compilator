@@ -894,6 +894,15 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return std::any{std::string{"__ERROR"}};
     }
 
+    if (ctx->OPAREN())
+    {
+        auto aa = visit(ctx->expr(0));
+        string expType = (aa.has_value() && aa.type() == typeid(string)) ? any_cast<string>(aa) : "__ERROR";
+
+        if (expType == "Int")
+            return any{string{"Int"}};
+    }
+
     if (!ctx->OBJECTID().empty() && ctx->OBJECTID(0)->getText() == "self")
     {
         return std::any{std::string{"SELF_TYPE"}};
