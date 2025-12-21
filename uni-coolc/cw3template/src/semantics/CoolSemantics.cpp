@@ -11,6 +11,7 @@
 
 using namespace std;
 
+// 174:bf8229696f7a3bb4700cfddef19fa23f
 string print_inheritance_loops_error(vector<vector<string>> inheritance_loops);
 
 void collectClasses(
