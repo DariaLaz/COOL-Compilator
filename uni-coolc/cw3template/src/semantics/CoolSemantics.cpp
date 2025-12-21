@@ -17,7 +17,7 @@ void collectClasses(
     CoolParser::ProgramContext *program,
     unordered_map<string, CoolParser::ClassContext *> &classes,
     unordered_map<string, string> &parent,
-    vector<string> &classesInOrder);
+    vector<string> &classesInOrder, vector<std::string> &errors);
 
 vector<vector<string>> detectInheritanceLoops(
     const unordered_map<string, string> &parent, vector<string> &classesInOrder);
@@ -25,7 +25,7 @@ vector<vector<string>> detectInheritanceLoops(
 vector<pair<string, string>> detectInheritanceUndefinedClass(
     const unordered_map<string, string> &parent,
     unordered_map<string, CoolParser::ClassContext *> &classes,
-    vector<string> &classesInOrder);
+    vector<string> &classesInOrder, vector<string> &errors);
 
 void print_inheritance_undefined_error(vector<std::string> &errors, vector<pair<string, string>> &inheritance_undefined);
 
@@ -63,7 +63,7 @@ expected<void *, vector<string>> CoolSemantics::run()
     unordered_map<string, string> parent;
 
     auto *program = parser_->program();
-    collectClasses(program, classes, parent, classesInOrder);
+    collectClasses(program, classes, parent, classesInOrder, errors);
 
     auto loops = detectInheritanceLoops(parent, classesInOrder);
     if (!loops.empty())
@@ -72,7 +72,7 @@ expected<void *, vector<string>> CoolSemantics::run()
     }
 
     auto undefinedClasses =
-        detectInheritanceUndefinedClass(parent, classes, classesInOrder);
+        detectInheritanceUndefinedClass(parent, classes, classesInOrder, errors);
 
     if (!undefinedClasses.empty())
     {
@@ -102,18 +102,24 @@ expected<void *, vector<string>> CoolSemantics::run()
 // utils
 
 void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, CoolParser::ClassContext *> &classes,
-                    unordered_map<string, string> &parent, vector<string> &classesInOrder)
+                    unordered_map<string, string> &parent, vector<string> &classesInOrder, vector<std::string> &errors)
 {
 
     for (auto *cls : program->class_())
     {
         string className = cls->TYPEID(0)->getText();
 
-        // if (classes.count(className))
-        // {
-        //     errors.push_back("Class " + className + " is defined multiple times.");
-        //     return unexpected(errors);
-        // }
+        bool isBuildIn = className == "Object" ||
+                         className == "Bool" ||
+                         className == "Int" ||
+                         className == "IO" ||
+                         className == "String";
+
+        if (isBuildIn || classes.count(className))
+        {
+            errors.push_back("Type `" + className + "` already defined");
+            continue;
+        }
 
         classes[className] = cls;
         classesInOrder.push_back(className);
@@ -210,7 +216,7 @@ string print_inheritance_loops_error(vector<vector<string>> inheritance_loops)
 vector<pair<string, string>> detectInheritanceUndefinedClass(
     const unordered_map<string, string> &parent,
     unordered_map<string, CoolParser::ClassContext *> &classes,
-    vector<string> &classesInOrder)
+    vector<string> &classesInOrder, vector<string> &errors)
 {
     vector<pair<string, string>> undefinedClasses;
     unordered_set<string> globallyVisited;
@@ -227,9 +233,24 @@ vector<pair<string, string>> detectInheritanceUndefinedClass(
             }
             auto p = parent.at(current);
 
-            if (!classes.count(p) && p != "Object")
+            bool isBuildIn = p == "Object" ||
+                             p == "Bool" ||
+                             p == "Int" ||
+                             p == "IO" ||
+                             p == "String";
+
+            if (!classes.count(p) && !isBuildIn)
             {
                 undefinedClasses.push_back({current, p});
+            }
+
+            bool hasError = p == "Bool" ||
+                            p == "Int" ||
+                            p == "String";
+
+            if (hasError)
+            {
+                errors.push_back("`" + cls + "` inherits from `" + p + "` which is an error");
             }
             globallyVisited.insert(current);
             current = p;
