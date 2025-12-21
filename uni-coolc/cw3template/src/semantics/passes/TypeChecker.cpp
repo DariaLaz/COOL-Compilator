@@ -202,6 +202,20 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return any{string{"Int"}};
     }
 
+    if (ctx->TILDE())
+    {
+        auto aa = visit(ctx->expr(0));
+        string expType = (aa.has_value() && aa.type() == typeid(string)) ? any_cast<string>(aa) : "__ERROR";
+
+        if (expType != "Int")
+        {
+            errors.push_back(
+                "Argument of integer negation is not of type `Int`, but of type `" + expType + "`");
+        }
+
+        return any{string{"Int"}};
+    }
+
     if (ctx->ASSIGN())
     {
         string lhsName = ctx->OBJECTID(0)->getText();
