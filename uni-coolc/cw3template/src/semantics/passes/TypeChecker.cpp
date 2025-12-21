@@ -225,6 +225,30 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return any{string{"Bool"}};
     }
 
+    if (ctx->EQ())
+    {
+        auto lAny = visit(ctx->expr(0));
+        auto rAny = visit(ctx->expr(1));
+
+        string l = (lAny.has_value() && lAny.type() == typeid(string)) ? any_cast<string>(lAny) : "__ERROR";
+        string r = (rAny.has_value() && rAny.type() == typeid(string)) ? any_cast<string>(rAny) : "__ERROR";
+
+        if ((l == "String" || r == "String") && l != r)
+        {
+            errors.push_back("A `String` can only be compared to another `String` and not to a `" + (l == "String" ? r : l) + "`");
+        }
+        else if ((l == "Int" || r == "Int") && l != r)
+        {
+            errors.push_back("An `Int` can only be compared to another `Int` and not to a `" + (l == "Int" ? r : l) + "`");
+        }
+        else if ((l == "Bool" || r == "Bool") && l != r)
+        {
+            errors.push_back("A `Bool` can only be compared to another `Bool` and not to a `" + (l == "Bool" ? r : l) + "`");
+        }
+
+        return any{string{"Bool"}};
+    }
+
     if (ctx->TILDE())
     {
         auto aa = visit(ctx->expr(0));
