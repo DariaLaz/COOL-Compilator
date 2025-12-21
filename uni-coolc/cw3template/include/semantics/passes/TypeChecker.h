@@ -39,6 +39,7 @@ private:
   void pushScope();
   void popScope();
   bool lookVarInAllScopes(string &name, string &out);
+  bool lookupAttribute(string &name, string &out);
 
 public:
   // TODO: add necessary dependencies to constructor

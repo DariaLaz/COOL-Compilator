@@ -296,7 +296,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             rhsType = any_cast<string>(anyRhsType);
 
         string lhsType;
-        if (!lookVarInAllScopes(lhsName, lhsType))
+        if (!lookVarInAllScopes(lhsName, lhsType) && !lookupAttribute(lhsName, lhsType))
         {
             errors.push_back(
                 "Assignee named `" + lhsName + "` not in scope");
@@ -313,7 +313,6 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 
         if (parent.count(lhsType))
         {
-
             string current = parent.at(lhsType);
             while (classes.count(current))
             {
@@ -935,16 +934,9 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         if (lookVarInAllScopes(name, t))
             return any{t};
 
-        t = current_class;
-        while (true)
+        if (lookupAttribute(name, t))
         {
-            if (attrTypesByClass[t].count(name))
-            {
-                return any{attrTypesByClass[t][name]};
-            }
-            if (!parent.count(t))
-                break;
-            t = parent.at(t);
+            return any{t};
         }
 
         errors.push_back(
@@ -1026,6 +1018,23 @@ bool TypeChecker::lookVarInAllScopes(string &name, string &out)
             out = scopes[i][name];
             return true;
         }
+    }
+    return false;
+}
+
+bool TypeChecker::lookupAttribute(string &name, string &out)
+{
+    string cls = current_class;
+    while (true)
+    {
+        if (attrTypesByClass.count(cls) && attrTypesByClass[cls].count(name))
+        {
+            out = attrTypesByClass[cls][name];
+            return true;
+        }
+        if (!parent.count(cls))
+            break;
+        cls = parent.at(cls);
     }
     return false;
 }

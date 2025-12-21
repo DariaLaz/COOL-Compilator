@@ -146,16 +146,6 @@ void collectClasses(CoolParser::ProgramContext *program, unordered_map<string, C
             string attrName = attr->OBJECTID()->getText();
             string declaredType = attr->TYPEID()->getText();
 
-            if (declaredType != "Int" &&
-                declaredType != "Bool" &&
-                declaredType != "String" &&
-                declaredType != "Object" &&
-                declaredType != "SELF_TYPE" &&
-                !classes.count(declaredType))
-            {
-                continue;
-            }
-
             attrTypesByClass[className][attrName] = declaredType;
         }
 
