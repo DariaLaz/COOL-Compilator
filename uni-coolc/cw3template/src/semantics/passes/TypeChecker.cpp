@@ -263,6 +263,20 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return any{string{"Int"}};
     }
 
+    if (ctx->NOT())
+    {
+        auto aa = visit(ctx->expr(0));
+        string expType = (aa.has_value() && aa.type() == typeid(string)) ? any_cast<string>(aa) : "__ERROR";
+
+        if (expType != "Bool")
+        {
+            errors.push_back(
+                "Argument of boolean negation is not of type `Bool`, but of type `" + expType + "`");
+        }
+
+        return any{string{"Bool"}};
+    }
+
     if (ctx->ASSIGN())
     {
         string lhsName = ctx->OBJECTID(0)->getText();
@@ -536,7 +550,13 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
     {
         string typeName = ctx->TYPEID(0)->getText();
 
-        if (!classes.count(typeName))
+        bool isBuiltin =
+            typeName == "Int" ||
+            typeName == "Bool" ||
+            typeName == "String" ||
+            typeName == "Object";
+
+        if (!classes.count(typeName) && !isBuiltin)
         {
             errors.push_back(
                 "Attempting to instantiate unknown class `" + typeName + "`");
