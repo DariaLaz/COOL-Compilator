@@ -58,6 +58,7 @@ void TypeChecker::collectAttributes(CoolParser::ClassContext *ctx)
             declaredType != "Bool" &&
             declaredType != "String" &&
             declaredType != "Object" &&
+            declaredType != "SELF_TYPE" &&
             !classes.count(declaredType))
         {
             errors.push_back(
@@ -101,6 +102,7 @@ std::any TypeChecker::visitMethod(CoolParser::MethodContext *ctx)
 
     possibleSelfTypes.insert(current_class);
     possibleSelfTypes.insert("Object");
+    possibleSelfTypes.insert("SELF_TYPE");
 
     string current = parent.at(current_class);
     while (classes.count(current))
@@ -483,9 +485,14 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             string varName = ctx->OBJECTID(i)->getText();
             string varType = ctx->TYPEID(i)->getText();
             pushScope();
-            if (!classes.count(varType) &&
-                varType != "Int" && varType != "Bool" &&
-                varType != "String" && varType != "Object")
+            if (varType == "SELF_TYPE")
+            {
+                errors.push_back(
+                    "`" + varName + "` in case-of-esac declared to be of type `SELF_TYPE` which is not allowed");
+            }
+            else if (!classes.count(varType) &&
+                     varType != "Int" && varType != "Bool" &&
+                     varType != "String" && varType != "Object")
             {
                 errors.push_back(
                     "Option `" + varName + "` in case-of-esac declared to have unknown type `" + varType + "`");
@@ -554,7 +561,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             typeName == "Int" ||
             typeName == "Bool" ||
             typeName == "String" ||
-            typeName == "Object";
+            typeName == "Object" || typeName == "SELF_TYPE";
 
         if (!classes.count(typeName) && !isBuiltin)
         {

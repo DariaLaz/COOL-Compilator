@@ -399,7 +399,11 @@ void detectMethodUndefinedArgsErrors(
             {
                 auto argType = formal->TYPEID()->getText();
 
-                if (!classes.count(argType))
+                if (argType == "SELF_TYPE")
+                {
+                    errors.push_back("Formal argument `" + formal->OBJECTID()->getText() + "` declared of type `SELF_TYPE` which is not allowed");
+                }
+                else if (!classes.count(argType))
                 {
                     errors.push_back("Method `" + methodName + "` in class `" + clsName + "` declared to have an argument of type `" + argType + "` which is undefined");
                     break;
