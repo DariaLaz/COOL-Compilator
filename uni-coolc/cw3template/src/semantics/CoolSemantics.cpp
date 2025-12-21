@@ -399,14 +399,19 @@ void detectMethodUndefinedArgsErrors(
             {
                 auto argType = formal->TYPEID()->getText();
 
+                bool isBuiltin =
+                    argType == "Int" ||
+                    argType == "Bool" ||
+                    argType == "String" ||
+                    argType == "Object";
+
                 if (argType == "SELF_TYPE")
                 {
                     errors.push_back("Formal argument `" + formal->OBJECTID()->getText() + "` declared of type `SELF_TYPE` which is not allowed");
                 }
-                else if (!classes.count(argType))
+                else if (!classes.count(argType) && !isBuiltin)
                 {
                     errors.push_back("Method `" + methodName + "` in class `" + clsName + "` declared to have an argument of type `" + argType + "` which is undefined");
-                    break;
                 }
             }
         }

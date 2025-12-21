@@ -9,6 +9,14 @@ using namespace std;
 
 vector<string> TypeChecker::check(CoolParser *parser)
 {
+
+    methodReturnTypes["String"]["concat"] = "String";
+    methodParamTypes["String"]["concat"] = {"String"};
+    methodReturnTypes["String"]["length"] = "Int";
+    methodParamTypes["String"]["length"] = {};
+    methodReturnTypes["String"]["substr"] = "String";
+    methodParamTypes["String"]["substr"] = {"Int", "Int"};
+
     visitProgram(parser->program());
     parser->reset();
 
@@ -303,6 +311,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 
         possibleSelfTypes.insert(lhsType);
         possibleSelfTypes.insert("Object");
+        possibleSelfTypes.insert("SELF_TYPE");
 
         if (parent.count(lhsType))
         {
@@ -906,8 +915,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         auto aa = visit(ctx->expr(0));
         string expType = (aa.has_value() && aa.type() == typeid(string)) ? any_cast<string>(aa) : "__ERROR";
 
-        if (expType == "Int")
-            return any{string{"Int"}};
+        return expType;
     }
 
     if (!ctx->OBJECTID().empty() && ctx->OBJECTID(0)->getText() == "self")
@@ -958,6 +966,7 @@ std::any TypeChecker::visitAttr(CoolParser::AttrContext *ctx)
 
             possibleSelfTypes.insert(initType);
             possibleSelfTypes.insert("Object");
+            possibleSelfTypes.insert("SELF_TYPE");
 
             if (parent.count(initType))
             {
