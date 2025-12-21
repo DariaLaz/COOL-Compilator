@@ -288,7 +288,9 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
 
     if (ctx->WHILE())
     {
-        auto cond = any_cast<string>(visit(ctx->expr(0)));
+        auto a = visit(ctx->expr(0));
+        auto cond = a.has_value() && a.type() == typeid(string) ? any_cast<string>(a) : "_ERROR";
+
         bool isSubtype = false;
         auto t = cond;
         while (true)
@@ -318,11 +320,39 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         pushScope();
         for (auto *v : ctx->vardecl())
         {
-            string n = v->OBJECTID()->getText();
-            string t = v->TYPEID()->getText();
-            scopes.back()[n] = t;
+
+            string name = v->OBJECTID()->getText();
+            string type = v->TYPEID()->getText();
             if (v->expr())
-                visit(v->expr());
+            {
+                auto exprTypeAny = (visit(v->expr()));
+                string exprType = "__ERROR";
+                if (exprTypeAny.has_value() && exprTypeAny.type() == typeid(std::string))
+                {
+                    exprType = any_cast<string>(exprTypeAny);
+                }
+
+                bool isSubtype = false;
+                auto t = exprType;
+                while (true)
+                {
+                    if (t == type)
+                    {
+                        isSubtype = true;
+                        break;
+                    }
+                    if (!parent.count(t))
+                        break;
+                    t = parent.at(t);
+                }
+
+                if (!isSubtype && type != "__ERROR" && exprType != "__ERROR")
+                {
+                    errors.push_back("Initializer for variable `" + name + "` in let-in expression is of type `" + exprType + "` which is not a subtype of the declared type `" + type + "`");
+                }
+            }
+
+            scopes.back()[name] = type;
         }
         auto r = visit(ctx->expr().back());
         popScope();
