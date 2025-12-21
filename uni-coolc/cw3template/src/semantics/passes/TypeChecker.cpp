@@ -265,25 +265,37 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
             return std::any{t1};
 
         // find he common type
-        unordered_set<string> seen;
-        string a = t1;
+        unordered_set<string> ancestors;
+        string t = t1;
         while (true)
         {
-            seen.insert(a);
-            if (!parent.count(a))
+            ancestors.insert(t);
+            if (!parent.count(t))
                 break;
-            a = parent.at(a);
+            t = parent.at(t);
         }
 
-        string b = t2;
-        while (!seen.count(b))
+        t = t2;
+        string lub = "Object";
+        while (true)
         {
-            if (!parent.count(b))
+            if (ancestors.count(t))
+            {
+                lub = t;
                 break;
-            b = parent.at(b);
+            }
+            if (!parent.count(t))
+                break;
+            t = parent.at(t);
         }
 
-        return any{b};
+        return any{lub};
+    }
+
+    if (ctx->ISVOID())
+    {
+        visit(ctx->expr(0));
+        return std::any{std::string{"Bool"}};
     }
 
     if (ctx->WHILE())
