@@ -289,7 +289,7 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
     if (ctx->WHILE())
     {
         auto a = visit(ctx->expr(0));
-        auto cond = a.has_value() && a.type() == typeid(string) ? any_cast<string>(a) : "_ERROR";
+        auto cond = a.has_value() && a.type() == typeid(string) ? any_cast<string>(a) : "__ERROR";
 
         bool isSubtype = false;
         auto t = cond;
@@ -358,6 +358,82 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         popScope();
 
         return r;
+    }
+
+    // case
+    if (ctx->CASE())
+    {
+        unordered_set<string> branchTypes;
+        unordered_set<string> declaredBranchTypes;
+
+        visit(ctx->expr(0));
+
+        for (size_t i = 0; i < ctx->OBJECTID().size(); ++i)
+        {
+            string varName = ctx->OBJECTID(i)->getText();
+            string varType = ctx->TYPEID(i)->getText();
+            pushScope();
+            if (!classes.count(varType) &&
+                varType != "Int" && varType != "Bool" &&
+                varType != "String" && varType != "Object")
+            {
+                errors.push_back(
+                    "Option `" + varName + "` in case-of-esac declared to have unknown type `" + varType + "`");
+            }
+            else
+            {
+
+                scopes.back()[varName] = varType;
+            }
+
+            if (declaredBranchTypes.count(varType))
+            {
+                errors.push_back("Multiple options match on type `" + varType + "`");
+            }
+            declaredBranchTypes.insert(varType);
+
+            auto bodyAny = visit(ctx->expr(i + 1));
+            if (bodyAny.has_value() && bodyAny.type() == typeid(string))
+            {
+                auto a = any_cast<string>(bodyAny);
+                branchTypes.insert(a);
+            }
+
+            popScope();
+        }
+
+        if (branchTypes.empty())
+            return any{string{"__ERROR"}};
+
+        string lub = *branchTypes.begin();
+        for (auto &cur : branchTypes)
+        {
+            unordered_set<string> ancestors;
+
+            string t = lub;
+            while (true)
+            {
+                ancestors.insert(t);
+                if (!parent.count(t))
+                    break;
+                t = parent.at(t);
+            }
+
+            t = cur;
+            lub = "__ERROR";
+            while (true)
+            {
+                if (ancestors.count(t))
+                {
+                    lub = t;
+                    break;
+                }
+                if (!parent.count(t))
+                    break;
+                t = parent.at(t);
+            }
+        }
+        return any{lub};
     }
 
     // implicit dispatch
