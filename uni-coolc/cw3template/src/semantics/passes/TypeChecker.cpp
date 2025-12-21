@@ -202,6 +202,29 @@ std::any TypeChecker::visitExpr(CoolParser::ExprContext *ctx)
         return any{string{"Int"}};
     }
 
+    if (ctx->LT() || ctx->LE())
+    {
+        auto lAny = visit(ctx->expr(0));
+        auto rAny = visit(ctx->expr(1));
+
+        string l = (lAny.has_value() && lAny.type() == typeid(string)) ? any_cast<string>(lAny) : "__ERROR";
+        string r = (rAny.has_value() && rAny.type() == typeid(string)) ? any_cast<string>(rAny) : "__ERROR";
+
+        if (l != "Int")
+        {
+            errors.push_back(
+                "Left-hand-side of integer comparison is not of type `Int`, but of type `" + l + "`");
+        }
+
+        if (r != "Int")
+        {
+            errors.push_back(
+                "Right-hand-side of integer comparison is not of type `Int`, but of type `" + r + "`");
+        }
+
+        return any{string{"Bool"}};
+    }
+
     if (ctx->TILDE())
     {
         auto aa = visit(ctx->expr(0));
