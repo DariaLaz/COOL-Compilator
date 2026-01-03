@@ -6,7 +6,7 @@
 
 using namespace std;
 
-namespace riscv_emit {
+namespace riscv_emit { 
 
 int if_then_else_fi_label_count = 0;
 int while_loop_pool_label_count = 0;

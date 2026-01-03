@@ -8,7 +8,7 @@
 #include "Mnemonic.h"
 #include "Register.h"
 
-namespace riscv_emit {
+namespace riscv_emit { 
 
 extern int if_then_else_fi_label_count;
 extern int while_loop_pool_label_count;
@@ -69,6 +69,9 @@ void emit_mnemonic(std::ostream &out, Mnemonic mnemonic);
 void emit_register(std::ostream &out, Register reg);
 
 void emit_memory_location(std::ostream &out, MemoryLocation location);
+
+void emit_byte(std::ostream &out, int value, std::string inline_comment = "");
+
 
 // Emits a "move" instruction that copies the `src` register into the `dest`
 // register. Uses the concrete instsruction/mnemonic `add`.

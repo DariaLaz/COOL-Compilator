@@ -51,7 +51,7 @@ Main.main:
     ret
 
 .data
-# ------------- Name table of classes ------------------------------------------
+# ------------- Name table of  classes ------------------------------------------
 .p2align 2
 .globl class_nameTab
 class_nameTab:

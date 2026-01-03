@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 script_dir="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd -- "${script_dir}/.." && pwd)"
 tests_dir="${project_root}/tests/codegen"
@@ -7,25 +10,38 @@ temp_dir="${project_root}/temp"
 
 mkdir -p "${temp_dir}"
 
-# First argument: interact or input
+# Args-
+#   -t           : trace (print source + generated assembly before running)
+#   interact     : run interactively (no diff/timeout)
+#   input/prefix : optional test file path or prefix
+trace=false
 interact=false
 input=""
-if [ -n "${1:-}" ]; then
-    if [ "${1:-}" == "interact" ]; then
-        interact=true
-    else
-        input="$1"
-        if [ -n "${2:-}" ]; then
-            if [ "${2:-}" == "interact" ]; then
-                interact=true
-            else
-                echo "Error: second argument can only be 'interact'"
-                echo "Usage: $0 [input|prefix] [interact]"
-                exit 1
-            fi
-        fi
-    fi
-fi
+
+for arg in "$@"; do
+  case "$arg" in
+    -t)
+      trace=true
+      ;;
+    interact)
+      interact=true
+      ;;
+    -*)
+      echo "Error: unknown option '$arg'"
+      echo "Usage: $0 [-t] [input|prefix] [interact]"
+      exit 1
+      ;;
+    *)
+      if [ -z "$input" ]; then
+        input="$arg"
+      else
+        echo "Error: unexpected extra argument '$arg'"
+        echo "Usage: $0 [-t] [input|prefix] [interact]"
+        exit 1
+      fi
+      ;;
+  esac
+done
 
 if [ ! -f "${lib_dir}/cc-rv-rt.o" ] || [ ! -f "${lib_dir}/cc-rv-rt.ld" ]; then
     echo "Error: Required runtime library (cc-rv-rt) not found; download from https://github.com/smanilov/coolc-riscv-runtime, build it, and put it in code/lib" >&2
@@ -41,7 +57,8 @@ run_test() {
     local input="$1"
     local testfile
     local testname
-    local in_path out_path sol_path
+    local cl_path s_path bin_path in_path out_path sol_path
+    local diff_output exit_code
 
     testfile="$(basename "${input}")"
     testname="${testfile%.cl}"
@@ -55,10 +72,49 @@ run_test() {
 
     total_tests=$((total_tests + 1))
 
-    "${bin_dir}/codegen" "${cl_path}" > "${s_path}"
-    riscv64-unknown-elf-gcc -mabi=ilp32 -march=rv32imzicsr -nostdlib \
-        "${lib_dir}/cc-rv-rt.o" "${s_path}" -T "${lib_dir}/cc-rv-rt.ld" \
-        -o "${bin_path}"
+    if $trace; then
+        echo "===== TEST: ${testname} ====="
+        echo "----- SOURCE: ${cl_path} -----"
+        cat "${cl_path}"
+        echo
+    fi
+
+    # Run codegen (optionally suppress its stderr when -t is enabled)
+    if $trace; then
+        "${bin_dir}/codegen" "${cl_path}" > "${s_path}" 2>/dev/null || {
+            echo "Test ${testname} CODEGEN FAILED (stderr suppressed due to -t)"
+            return
+        }
+    else
+        "${bin_dir}/codegen" "${cl_path}" > "${s_path}" || {
+            echo "Test ${testname} CODEGEN FAILED"
+            return
+        }
+    fi
+
+    if $trace; then
+        echo "----- ASM: ${s_path} -----"
+        cat "${s_path}"
+        echo "==========================="
+        echo
+    fi
+
+    # Assemble + link (suppress gcc diagnostics only when -t is enabled)
+    if $trace; then
+        if ! riscv64-unknown-elf-gcc -mabi=ilp32 -march=rv32imzicsr -nostdlib \
+            "${lib_dir}/cc-rv-rt.o" "${s_path}" -T "${lib_dir}/cc-rv-rt.ld" \
+            -o "${bin_path}" 2>/dev/null; then
+            echo "Test ${testname} COMPILATION FAILED (gcc stderr suppressed due to -t)"
+            return
+        fi
+    else
+        if ! riscv64-unknown-elf-gcc -mabi=ilp32 -march=rv32imzicsr -nostdlib \
+            "${lib_dir}/cc-rv-rt.o" "${s_path}" -T "${lib_dir}/cc-rv-rt.ld" \
+            -o "${bin_path}"; then
+            echo "Test ${testname} COMPILATION FAILED"
+            return
+        fi
+    fi
 
     if $interact; then
         spike --isa=RV32IMZICSR "${bin_path}"
@@ -68,6 +124,7 @@ run_test() {
         else
             timeout 1s spike --isa=RV32IMZICSR "${bin_path}" < "${in_path}" > "${sol_path}"
         fi
+
         exit_code=$?
         if [ $exit_code -eq 124 ]; then
             echo "Test ${testname} TIMED OUT"
@@ -104,7 +161,7 @@ else
             done
         else
             echo "Error: '${input}' is not a valid file name or prefix"
-            echo "Usage: $0 [input|prefix] [interact]"
+            echo "Usage: $0 [-t] [input|prefix] [interact]"
             exit 1
         fi
     fi
