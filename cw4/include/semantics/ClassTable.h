@@ -124,7 +124,7 @@ class ClassTable {
                   SourceLocation source_location);
 
     bool is_subclass_of(int class_index, int ancestor_index);
-
+ 
     // If this method returns nullopt, then neither the specified class, nor any
     // of its ancestors has a method with this name.
     std::optional<std::vector<int>>
