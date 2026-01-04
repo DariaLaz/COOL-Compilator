@@ -24,6 +24,9 @@ class CoolCodegen {
     
     void emit_prototype_tables(std::ostream &out, vector<std::string>& class_names);
     void emit_prototype_table(std::ostream &out, const std::string& class_name, size_t index);
+
+    void emit_dispatch_tables(std::ostream &out, vector<std::string>& class_names);
+    void emit_dispatch_table(std::ostream &out, const std::string& class_name);
   public:
     CoolCodegen(std::string file_name, std::unique_ptr<ClassTable> class_table)
         : file_name_(std::move(file_name)),

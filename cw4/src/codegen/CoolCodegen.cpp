@@ -49,6 +49,7 @@ void CoolCodegen::emit_tables(ostream &out) {
 
     emit_name_table(out, all_class_names);
     emit_prototype_tables(out, all_class_names);
+    emit_dispatch_tables(out, all_class_names);
 }
 
 void CoolCodegen::emit_name_table(ostream &out, vector<string>& class_names) {
@@ -156,5 +157,30 @@ void CoolCodegen::emit_prototype_table(ostream &out, const std::string &class_na
         }
     }
     
+    riscv_emit::emit_empty_line(out);
+}
+
+
+void CoolCodegen::emit_dispatch_tables(ostream &out, vector<string>& class_names) {
+    riscv_emit::emit_comment(out, "Dispatch Tables");
+    for (const auto &class_name : class_names) {
+        emit_dispatch_table(out, class_name);
+    }
+}
+
+void CoolCodegen::emit_dispatch_table(std::ostream &out, const std::string& class_name) {
+    riscv_emit::emit_directive(out, "globl");
+    out << " " << class_name << "_dispTab" << endl;
+    size_t class_index = class_table_->get_index(class_name);
+    auto methods = class_table_->get_all_methods(class_index);
+
+    for (const auto &method_name : methods) {
+        auto current_class_name_sv =
+            class_table_->get_name(method_name.second);
+        std::string current_class_name(current_class_name_sv.data(),
+                                       current_class_name_sv.size());
+        riscv_emit::emit_word(out, current_class_name + "." + method_name.first);
+    }
+
     riscv_emit::emit_empty_line(out);
 }
