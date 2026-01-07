@@ -5,6 +5,7 @@ using namespace std;
 #include <cmath>
 
 
+
 void CoolCodegen::generate(ostream &out) {
 
     // Emit code here.
@@ -15,17 +16,15 @@ void CoolCodegen::generate(ostream &out) {
 
     // 3. emit code for method bodies; possibly append to static constants
 
-    // 4. emit prototype objects
-
-    // 5. emit dispatch tables
+    emit_tables(out);
 
     // 6. emit initialization methods for classes
 
     // 7. emit class name table
 
-    emit_tables(out);
 
     // 8. emit static constants
+    static_constants_.emit_all(out);
 
     // Extra tip: implement code generation for expressions in a separate class and reuse it for method impls and init methods.
 
