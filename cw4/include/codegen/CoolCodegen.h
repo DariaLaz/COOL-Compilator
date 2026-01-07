@@ -31,6 +31,8 @@ class CoolCodegen {
     void emit_dispatch_tables(std::ostream &out, vector<std::string>& class_names);
     void emit_dispatch_table(std::ostream &out, const std::string& class_name);
 
+    void emit_initialization_methods(std::ostream &out, vector<std::string>& class_names);
+
     void emit_class_object_table(std::ostream &out, vector<std::string>& class_names);
   public:
     CoolCodegen(std::string file_name, std::unique_ptr<ClassTable> class_table)

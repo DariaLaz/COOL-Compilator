@@ -16,8 +16,6 @@ void CoolCodegen::generate(ostream &out) {
 
     emit_tables(out);
 
-    // 6. emit initialization methods for classes
-
     static_constants_.emit_all(out);
 
     // Extra tip: implement code generation for expressions in a separate class and reuse it for method impls and init methods.
@@ -43,7 +41,7 @@ void CoolCodegen::emit_tables(ostream &out) {
     emit_name_table(out, all_class_names);
     emit_prototype_tables(out, all_class_names);
     emit_dispatch_tables(out, all_class_names);
-
+    emit_initialization_methods(out, all_class_names);
     emit_class_object_table(out, all_class_names);
 }
 
@@ -180,6 +178,164 @@ void CoolCodegen::emit_dispatch_table(std::ostream &out, const std::string& clas
     riscv_emit::emit_empty_line(out);
 }
 
+void CoolCodegen::emit_initialization_methods(std::ostream &out, vector<std::string>& class_names) {
+    riscv_emit::emit_comment(out, "Initialization Methods");
+    
+    out << ".globl Object_init\n\
+Object_init:\n\
+    # Most of the `init` functions of the default types are no-ops, so the\n\
+    # implementation is the same.\n\
+\n\
+    # stack discipline:\n\
+    # callee:\n\
+    # - activation frame starts at the stack pointer\n\
+    add fp, sp, 0\n\
+    # - previous return address is first on the activation frame\n\
+    sw ra, 0(sp)\n\
+    addi sp, sp, -4\n\
+    # before using saved registers (s1 -- s11), push them on the stack\n\
+\n\
+    # no op\n\
+\n\
+    # stack discipline:\n\
+    # callee:\n\
+    # - restore used saved registers (s1 -- s11) from the stack\n\
+    # - ra is restored from first word on activation frame\n\
+    lw ra, 0(fp)\n\
+    # - ra, arguments, and control link are popped from the stack\n\
+    addi sp, sp, 8\n\
+    # - fp is restored from control link\n\
+    lw fp, 0(sp)\n\
+    # - result is stored in a0\n\
+\n\
+    ret\n\
+\n\
+\n\
+.globl IO_init\n\
+IO_init:\n\
+    # Most of the `init` functions of the default types are no-ops, so the\n\
+    # implementation is the same.\n\
+\n\
+    add fp, sp, 0\n\
+    sw ra, 0(sp)\n\
+    addi sp, sp, -4\n\
+\n\
+    # no op\n\
+\n\
+    lw ra, 0(fp)\n\
+    addi sp, sp, 8\n\
+    lw fp, 0(sp)\n\
+    ret\n\
+\n\
+\n\
+# Initializes an object of class Int passed in a0. In practice, a no-op, since\n\
+# Int_protObj already has the first (and only) attribute set to 0.\n\
+.globl Int_init\n\
+Int_init:\n\
+    # Most of the `init` functions of the default types are no-ops, so the\n\
+    # implementation is the same.\n\
+\n\
+    add fp, sp, 0\n\
+    sw ra, 0(sp)\n\
+    addi sp, sp, -4\n\
+\n\
+    # no op\n\
+\n\
+    lw ra, 0(fp)\n\
+    addi sp, sp, 8\n\
+    lw fp, 0(sp)\n\
+    ret\n\
+\n\
+\n\
+# Initializes an object of class Bool passed in a0. In practice, a no-op, since\n\
+# Bool_protObj already has the first (and only) attribute set to 0.\n\
+.globl Bool_init\n\
+Bool_init:\n\
+    # Most of the `init` functions of the default types are no-ops, so the\n\
+    # implementation is the same.\n\
+\n\
+    add fp, sp, 0\n\
+    sw ra, 0(sp)\n\
+    addi sp, sp, -4\n\
+\n\
+    # no op\n\
+\n\
+    lw ra, 0(fp)\n\
+    addi sp, sp, 8\n\
+    lw fp, 0(sp)\n\
+    ret\n\
+\n\
+\n\
+# Initializes an object of class String passed in a0. Allocates a new Int to\n\
+# store the length of the String and links the length pointer to it. Returns the\n\
+# initialized String in a0.\n\
+#\n\
+# Used in `new String`, but useless, in general, since it creates an empty\n\
+# string. String only has methods `length`, `concat`, and `substr`.\n\
+.globl String_init\n\
+String_init:\n\
+    # In addition to the default behavior, copies the Int prototype object and\n\
+    # uses that as the length, rather than the prototype object directly. No\n\
+    # practical reason for this, other than simulating the default init logic for\n\
+    # an object with attributes.\n\
+\n\
+    add fp, sp, 0\n\
+    sw ra, 0(sp)\n\
+    addi sp, sp, -4\n\
+\n\
+    # store String argument\n\
+    sw s1, 0(sp)\n\
+    addi sp, sp, -4\n\
+    add s1, a0, zero\n\
+\n\
+    # copy Int prototype first\n\
+\n\
+    la a0, Int_protObj\n\
+    sw fp, 0(sp)\n\
+    addi sp, sp, -4\n\
+\n\
+    call Object.copy\n\
+\n\
+    sw a0, 12(s1)      # store new Int as length; value of Int is 0 by default\n\
+\n\
+    add a0, s1, zero   # restore String argument\n\
+\n\
+    addi sp, sp, 4\n\
+    lw s1, 0(sp)\n\
+    lw ra, 0(fp)\n\
+    addi sp, sp, 8\n\
+    lw fp, 0(sp)\n\
+\n\
+    ret\n\
+\n\
+\n\
+.globl Main_init\n\
+Main_init:\n\
+    # stack discipline:\n\
+    # callee:\n\
+    # - activation frame starts at the stack pointer\n\
+    add fp, sp, 0\n\
+    # - previous return address is first on the activation frame\n\
+    sw ra, 0(sp)\n\
+    addi sp, sp, -4\n\
+    # before using saved registers (s1 -- s11), push them on the stack\n\
+\n\
+    # no op\n\
+\n\
+    # stack discipline:\n\
+    # callee:\n\
+    # - restore used saved registers (s1 -- s11) from the stack\n\
+    # - ra is restored from first word on activation frame\n\
+    lw ra, 0(fp)\n\
+    # - ra, arguments, and control link are popped from the stack\n\
+    addi sp, sp, 8\n\
+    # - fp is restored from control link\n\
+    lw fp, 0(sp)\n\
+    # - result is stored in a0\n";
+
+    // TODO: Fix for main
+    riscv_emit::emit_empty_line(out);
+}
 
 void CoolCodegen::emit_class_object_table(std::ostream &out, vector<std::string>& class_names) {
     riscv_emit::emit_comment(out, "Class Object Table");
