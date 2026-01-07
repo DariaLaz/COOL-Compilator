@@ -12,18 +12,12 @@ void CoolCodegen::generate(ostream &out) {
 
     // 1. create an "object model class table" that uses the class_table_ to compute the layout of objects in memory
 
-    // 2. create a class to contain static constants (to be emitted at the end)
-
     // 3. emit code for method bodies; possibly append to static constants
 
     emit_tables(out);
 
     // 6. emit initialization methods for classes
 
-    // 7. emit class name table
-
-
-    // 8. emit static constants
     static_constants_.emit_all(out);
 
     // Extra tip: implement code generation for expressions in a separate class and reuse it for method impls and init methods.
@@ -49,6 +43,8 @@ void CoolCodegen::emit_tables(ostream &out) {
     emit_name_table(out, all_class_names);
     emit_prototype_tables(out, all_class_names);
     emit_dispatch_tables(out, all_class_names);
+
+    emit_class_object_table(out, all_class_names);
 }
 
 void CoolCodegen::emit_name_table(ostream &out, vector<string>& class_names) {
@@ -179,6 +175,19 @@ void CoolCodegen::emit_dispatch_table(std::ostream &out, const std::string& clas
         std::string current_class_name(current_class_name_sv.data(),
                                        current_class_name_sv.size());
         riscv_emit::emit_word(out, current_class_name + "." + method_name.first);
+    }
+
+    riscv_emit::emit_empty_line(out);
+}
+
+
+void CoolCodegen::emit_class_object_table(std::ostream &out, vector<std::string>& class_names) {
+    riscv_emit::emit_comment(out, "Class Object Table");
+    riscv_emit::emit_label(out, "class_objTab");
+    
+    for (const auto &class_name : class_names) {
+        riscv_emit::emit_word(out, class_name + "_protObj");
+        riscv_emit::emit_word(out, class_name + "_init");
     }
 
     riscv_emit::emit_empty_line(out);
