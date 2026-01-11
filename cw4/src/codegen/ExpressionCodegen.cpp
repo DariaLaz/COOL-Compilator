@@ -5,9 +5,6 @@
 using namespace std;
 
 void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
-    // if (auto assignment = dynamic_cast<const Assignment *>(expr)) {
-    //     return emit_assignment(out, assignment);
-    // }
     if (auto static_dispatch = dynamic_cast<const StaticDispatch *>(expr)) {
         return emit_static_dispatch(out, static_dispatch);
     } 
@@ -32,6 +29,14 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_object_reference(out, object_reference);
     }
 
+    if (auto sequence = dynamic_cast<const Sequence *>(expr)) {
+        return emit_sequence(out, sequence);
+    }
+
+    if (auto int_constant = dynamic_cast<const IntConstant *>(expr)) {
+        return emit_int_constant(out, int_constant);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -52,7 +57,9 @@ void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch*
         ++argc;
     }
 
-    riscv_emit::emit_jump_and_link(out, "IO.out_string");
+    string class_name(class_table_->get_name(expr->get_static_dispatch_type()));
+    string method_name = expr->get_method_name();
+    riscv_emit::emit_jump_and_link(out, class_name + "." + method_name);
 
     pop_register(argc + 1);
 }
@@ -169,4 +176,17 @@ void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatc
 void ExpressionCodegen::emit_object_reference(ostream& out, const ObjectReference* object_reference) {
     int fp_offset = lookup_var(object_reference->get_name());
     riscv_emit::emit_load_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
+}
+
+void ExpressionCodegen::emit_sequence(ostream& out, const Sequence* sequence) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Sequence");
+    for (const auto& expr : sequence->get_sequence()) {
+        generate(out, expr);
+    }
+}
+
+void ExpressionCodegen::emit_int_constant(ostream& out, const IntConstant* int_constant) {
+    string label = static_constants_->use_int_constant(int_constant->get_value());
+    riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
 }

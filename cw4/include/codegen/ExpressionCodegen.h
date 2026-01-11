@@ -12,6 +12,8 @@
 #include  "semantics/typed-ast/NewObject.h"
 #include "semantics/typed-ast/DynamicDispatch.h"
 #include "semantics/typed-ast/ObjectReference.h"
+#include "semantics/typed-ast/Sequence.h"
+#include "semantics/typed-ast/IntConstant.h"
 
 using namespace std;
 
@@ -26,6 +28,8 @@ class ExpressionCodegen {
     void emit_new_object(std::ostream& out, const NewObject* new_object);
     void emit_dynamic_dispatch(ostream &out, const DynamicDispatch* dynamic_dispatch);
     void emit_object_reference(ostream &out, const ObjectReference* object_reference);
+    void emit_sequence(ostream &out, const Sequence* sequence);
+    void emit_int_constant(ostream &out, const IntConstant* int_constant);
     
   public:
   ExpressionCodegen(StaticConstants* static_constants)
