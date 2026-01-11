@@ -105,10 +105,7 @@ _int_tag:\n\
 .globl _string_tag\n\
 _string_tag:\n\
     .word 4\n";
-
-
 }
-
 
 string StaticConstants::unescape_string_literal(const string& raw) {
     string out;

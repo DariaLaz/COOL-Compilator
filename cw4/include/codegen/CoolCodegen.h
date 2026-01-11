@@ -45,6 +45,7 @@ class CoolCodegen {
           static_constants_(),
           expression_codegen_(&static_constants_)
           {
+              expression_codegen_.setClassTable(class_table_.get());
           }
 
     void generate(std::ostream &out);

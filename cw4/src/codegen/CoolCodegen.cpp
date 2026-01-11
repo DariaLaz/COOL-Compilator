@@ -52,17 +52,16 @@ void CoolCodegen::emit_methods(ostream &out) {
             riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4);
             riscv_emit::emit_empty_line(out);
 
-
+            expression_codegen_.reset_frame();
             expression_codegen_.generate(out, class_table_->get_method_body(class_index, method_name));
             
             riscv_emit::emit_empty_line(out);
             riscv_emit::emit_load_word(out, ReturnAddress{}, MemoryLocation{0, FramePointer{}});
-
-            size_t num_args = class_table_->get_argument_names(class_index, method_name).size();
-            int pop_bytes = 4 * (static_cast<int>(num_args) + 2);
-            riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, pop_bytes);
+            riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, 8);
             riscv_emit::emit_load_word(out, FramePointer{}, MemoryLocation{0, StackPointer{}});
+            riscv_emit::emit_ident(out);
             riscv_emit::emit_mnemonic(out, Mnemonic::Return);
+            riscv_emit::emit_empty_line(out);
         }
     }
 
