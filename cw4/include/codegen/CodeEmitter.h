@@ -38,6 +38,9 @@ void emit_add_immediate(std::ostream &out, Register dest, Register lhs,
 void emit_subtract(std::ostream &out, Register dest, Register lhs,
                    Register rhs);
 
+void emit_string(std::ostream &out, std::string value,
+                     std::string inline_comment = "");
+
 void emit_multiply(std::ostream &out, Register dest, Register lhs,
                    Register rhs);
 

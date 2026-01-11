@@ -17,6 +17,7 @@ class StaticConstants {
     bool is_false_used = false;
     
     unordered_map<int, string> int_to_label;
+    static string unescape_string_literal(const string& raw);
   public:
     string use_string_constant(const string& str);
     string use_bool_constant(bool value);

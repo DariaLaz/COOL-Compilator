@@ -36,6 +36,4 @@ void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch*
 
     // expression_codegen_.generate(expr->get_target());
     out << "    jal IO.out_string\n";
-
-    riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, 8);
 }
