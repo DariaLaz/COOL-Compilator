@@ -8,8 +8,6 @@ using namespace std;
 
 void CoolCodegen::generate(ostream &out) {
 
-    // Emit code here.
-
     // 1. create an "object model class table" that uses the class_table_ to compute the layout of objects in memory
 
     // 3. emit code for method bodies; possibly append to static constants
@@ -23,6 +21,8 @@ void CoolCodegen::generate(ostream &out) {
 }
 
 void CoolCodegen::emit_tables(ostream &out) {
+    rscv_emit::emit_word(out, "data");
+
     vector<string> class_names = class_table_->get_class_names();
     vector<string> base_class_names = {"Object", "IO", "Int", "Bool", "String"};
     vector<string> other_class_names;
@@ -46,7 +46,7 @@ void CoolCodegen::emit_tables(ostream &out) {
 }
 
 void CoolCodegen::emit_name_table(ostream &out, vector<string>& class_names) {
-    riscv_emit::emit_comment(out, "Class Name Table");
+    riscv_emit::emit_header_comment(out, "Class Name Table");
     riscv_emit::emit_p2align(out, 2);
     riscv_emit::emit_directive(out, "globl");
     out << " class_nameTab" << endl;
@@ -98,7 +98,7 @@ void CoolCodegen::emit_className(std::ostream &out, const std::string &class_nam
 }
 
 void CoolCodegen::emit_prototype_tables(ostream &out, vector<string>& class_names) {
-    riscv_emit::emit_comment(out, "Prototype Object Table");
+    riscv_emit::emit_header_comment(out, "Prototype Object Table");
     riscv_emit::emit_p2align(out, 2);
     
     for (size_t i = 0; i < class_names.size(); ++i) {
@@ -155,7 +155,7 @@ void CoolCodegen::emit_prototype_table(ostream &out, const std::string &class_na
 
 
 void CoolCodegen::emit_dispatch_tables(ostream &out, vector<string>& class_names) {
-    riscv_emit::emit_comment(out, "Dispatch Tables");
+    riscv_emit::emit_header_comment(out, "Dispatch Tables");
     for (const auto &class_name : class_names) {
         emit_dispatch_table(out, class_name);
     }
@@ -179,7 +179,7 @@ void CoolCodegen::emit_dispatch_table(std::ostream &out, const std::string& clas
 }
 
 void CoolCodegen::emit_initialization_methods(std::ostream &out, vector<std::string>& class_names) {
-    riscv_emit::emit_comment(out, "Initialization Methods");
+    riscv_emit::emit_header_comment(out, "Initialization Methods");
     
     out << ".globl Object_init\n\
 Object_init:\n\
@@ -338,7 +338,7 @@ Main_init:\n\
 }
 
 void CoolCodegen::emit_class_object_table(std::ostream &out, vector<std::string>& class_names) {
-    riscv_emit::emit_comment(out, "Class Object Table");
+    riscv_emit::emit_header_comment(out, "Class Object Table");
     riscv_emit::emit_label(out, "class_objTab");
     
     for (const auto &class_name : class_names) {

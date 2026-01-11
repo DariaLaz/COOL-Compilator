@@ -19,6 +19,8 @@ class CoolCodegen {
     std::string file_name_;
     std::unique_ptr<ClassTable> class_table_;
 
+
+
     void emit_tables(std::ostream &out);
     void emit_name_table(std::ostream &out,  vector<std::string>& class_names);
     void emit_className_attributes(std::ostream &out, const std::string &class_name);

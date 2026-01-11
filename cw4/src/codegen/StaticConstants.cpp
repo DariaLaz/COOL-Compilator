@@ -30,7 +30,7 @@ string StaticConstants::use_int_constant(int value) {
 
 
 void StaticConstants::emit_all(ostream &out) {
-    riscv_emit::emit_comment(out, "Static Constants");
+    riscv_emit::emit_header_comment(out, "Static Constants");
 
     for (const auto& [str, label] : string_to_label) {
         riscv_emit::emit_gc_tag(out);
