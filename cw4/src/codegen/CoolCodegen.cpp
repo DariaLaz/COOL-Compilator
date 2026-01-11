@@ -2,15 +2,13 @@
 
 using namespace std;
 #include "codegen/CodeEmitter.h"
+#include "codegen/Register.h"
 #include <cmath>
 
 
 
 void CoolCodegen::generate(ostream &out) {
-
-    // 1. create an "object model class table" that uses the class_table_ to compute the layout of objects in memory
-
-    // 3. emit code for method bodies; possibly append to static constants
+    emit_methods(out);
 
     emit_tables(out);
 
@@ -20,8 +18,62 @@ void CoolCodegen::generate(ostream &out) {
 
 }
 
+
+void CoolCodegen::emit_methods(ostream &out) {
+    riscv_emit::emit_directive(out, "text");
+    riscv_emit::emit_empty_line(out);
+
+    riscv_emit::emit_label(out, "_inf_loop");
+    out << "    j _inf_loop" << endl;
+    riscv_emit::emit_empty_line(out);
+    
+    riscv_emit::emit_header_comment(out, "Method Implementations");
+
+    int num_classes = class_table_->get_num_of_classes();
+
+    vector<string> base_class_names = {"Object", "IO", "Int", "Bool", "String"};
+
+    for (int class_index = 0; class_index < num_classes; ++class_index) {
+        std::string_view class_name_sv = class_table_->get_name(class_index);
+        std::string class_name(class_name_sv.data(), class_name_sv.size());
+
+        if (std::find(base_class_names.begin(), base_class_names.end(), class_name) != base_class_names.end()) {
+            continue;
+        }
+
+        auto methods = class_table_->get_method_names(class_index);
+
+        for (const auto &method_name : methods) {
+            riscv_emit::emit_empty_line(out);
+            riscv_emit::emit_directive(out, "globl");
+            std::string function_label = class_name + "." + method_name;
+            out<< " " << function_label << endl;;
+            riscv_emit::emit_label(out, function_label);
+
+            riscv_emit::emit_add(out, FramePointer{}, StackPointer{}, ZeroRegister{});
+            riscv_emit::emit_store_word(out, ReturnAddress{}, MemoryLocation{0, StackPointer{}});
+            riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4);
+            riscv_emit::emit_empty_line(out);
+
+
+            // Call expr
+            
+            riscv_emit::emit_empty_line(out);
+            riscv_emit::emit_load_word(out, ReturnAddress{}, MemoryLocation{0, FramePointer{}});
+
+            size_t num_args = class_table_->get_argument_names(class_index, method_name).size();
+            int pop_bytes = 4 * (static_cast<int>(num_args) + 2);
+            riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, pop_bytes);
+            riscv_emit::emit_load_word(out, FramePointer{}, MemoryLocation{0, StackPointer{}});
+            riscv_emit::emit_mnemonic(out, Mnemonic::Return);
+        }
+    }
+
+    riscv_emit::emit_empty_line(out);
+}
+
 void CoolCodegen::emit_tables(ostream &out) {
-    rscv_emit::emit_word(out, "data");
+    riscv_emit::emit_directive(out, "data");
 
     vector<string> class_names = class_table_->get_class_names();
     vector<string> base_class_names = {"Object", "IO", "Int", "Bool", "String"};
