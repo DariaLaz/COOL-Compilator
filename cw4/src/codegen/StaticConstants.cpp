@@ -50,7 +50,7 @@ void StaticConstants::emit_all(ostream &out) {
         riscv_emit::emit_word(out, obj_size);
         riscv_emit::emit_word(out, "String_dispTab");
         riscv_emit::emit_word(out, label + ".length");
-        riscv_emit::emit_word(out, "\"" + str + "\"");
+        riscv_emit::emit_word(out, str);
 
         for (size_t i = str_len; i % 4 != 0; ++i) {
             riscv_emit::emit_byte(out, 0);

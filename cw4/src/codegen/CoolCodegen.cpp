@@ -13,9 +13,6 @@ void CoolCodegen::generate(ostream &out) {
     emit_tables(out);
 
     static_constants_.emit_all(out);
-
-    // Extra tip: implement code generation for expressions in a separate class and reuse it for method impls and init methods.
-
 }
 
 
@@ -56,7 +53,7 @@ void CoolCodegen::emit_methods(ostream &out) {
             riscv_emit::emit_empty_line(out);
 
 
-            // Call expr
+            expression_codegen_.generate(out, class_table_->get_method_body(class_index, method_name));
             
             riscv_emit::emit_empty_line(out);
             riscv_emit::emit_load_word(out, ReturnAddress{}, MemoryLocation{0, FramePointer{}});

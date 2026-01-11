@@ -9,12 +9,14 @@
 #include "CoolParser.h"
 #include "semantics/ClassTable.h"
 #include "StaticConstants.h"
+#include "ExpressionCodegen.h"
 
 using namespace std;
 
 class CoolCodegen {
   private:
     StaticConstants static_constants_;
+    ExpressionCodegen expression_codegen_;
 
     std::string file_name_;
     std::unique_ptr<ClassTable> class_table_;
@@ -40,7 +42,9 @@ class CoolCodegen {
     CoolCodegen(std::string file_name, std::unique_ptr<ClassTable> class_table)
         : file_name_(std::move(file_name)),
           class_table_(std::move(class_table)),
-          static_constants_(){
+          static_constants_(),
+          expression_codegen_(&static_constants_)
+          {
           }
 
     void generate(std::ostream &out);
