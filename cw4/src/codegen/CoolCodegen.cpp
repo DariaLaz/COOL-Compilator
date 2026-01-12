@@ -241,7 +241,7 @@ void CoolCodegen::emit_prototype_table(ostream &out, const string &class_name, s
             if (attr_type == "Int") {
                 riscv_emit::emit_word(out, static_constants_.use_int_constant(0));
             } else if (attr_type == "Bool") {
-                riscv_emit::emit_word(out, static_constants_.use_bool_constant("false"));
+                riscv_emit::emit_word(out, static_constants_.use_bool_constant(false));
             } else if (attr_type == "String") {
                 riscv_emit::emit_word(out, static_constants_.use_default_value("String"));
             } else {

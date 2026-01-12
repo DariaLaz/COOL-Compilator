@@ -20,6 +20,8 @@
 #include "semantics/typed-ast/IfThenElseFi.h"
 #include "semantics/typed-ast/BoolConstant.h"
 #include "semantics/typed-ast/IsVoid.h"
+#include "semantics/typed-ast/IntegerComparison.h"
+#include "semantics/typed-ast/EqualityComparison.h"
 
 
 using namespace std;
@@ -43,6 +45,8 @@ class ExpressionCodegen {
     void emit_if_then_else_fi(ostream &out, const IfThenElseFi* if_then_else_fi);
     void emit_bool_constant(ostream &out, const BoolConstant* bool_constant);
     void emit_is_void(ostream &out, const IsVoid* is_void);
+    void emit_integer_comparison(ostream &out, const IntegerComparison* integer_comparison);
+    void emit_equality_comparison(ostream &out, const EqualityComparison* equality_comparison);
     
   public:
 

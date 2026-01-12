@@ -57,6 +57,14 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_is_void(out, is_void);
     }
 
+    if (auto integer_comparison = dynamic_cast<const IntegerComparison *>(expr)) {
+        return emit_integer_comparison(out, integer_comparison);
+    }
+
+    if (auto equality_comparison = dynamic_cast<const EqualityComparison *>(expr)) {
+        return emit_equality_comparison(out, equality_comparison);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -316,15 +324,21 @@ void ExpressionCodegen::emit_attributes(
 
         if (init) {
             generate(out, init);
+            riscv_emit::emit_store_word(out, ArgumentRegister{0},
+                                    MemoryLocation{byte_offset, TempRegister{0}});
         } else {
             auto opt_type = class_table_->transitive_get_attribute_type(class_index, attr_name);
             int type_index = opt_type ? *opt_type : 0;
             string type_name(class_table_->get_name(type_index));
             string label = static_constants_->use_default_value(type_name);
-            if (!label.empty()){
+
+            if (!label.empty()) {
                 riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
-            }else{
-                riscv_emit::emit_store_word(out, ZeroRegister{}, MemoryLocation{byte_offset, TempRegister{0}});
+                riscv_emit::emit_store_word(out, ArgumentRegister{0},
+                                            MemoryLocation{byte_offset, TempRegister{0}});
+            } else {
+                riscv_emit::emit_store_word(out, ZeroRegister{},
+                                            MemoryLocation{byte_offset, TempRegister{0}});
             }
         }
 
@@ -391,6 +405,114 @@ void ExpressionCodegen::emit_is_void(std::ostream& out, const IsVoid* is_void) {
     riscv_emit::emit_label(out, true_lbl);
     riscv_emit::emit_load_address(out, ArgumentRegister{0},
                                  static_constants_->use_bool_constant(true));
+
+    riscv_emit::emit_label(out, end_lbl);
+}
+
+void ExpressionCodegen::emit_integer_comparison(
+    std::ostream& out,
+    const IntegerComparison* integer_comparison
+) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Integer Comparison");
+
+
+    generate(out, integer_comparison->get_lhs());
+    push_register(out, ArgumentRegister{0}); 
+
+    generate(out, integer_comparison->get_rhs());
+    riscv_emit::emit_move(out, TempRegister{1}, ArgumentRegister{0});
+
+    pop_words(out, 1);
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0});
+
+    riscv_emit::emit_load_word(out, TempRegister{0}, MemoryLocation{12, TempRegister{0}});
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{12, TempRegister{1}});
+
+    switch (integer_comparison->get_kind()) {
+        case IntegerComparison::Kind::LessThan: {
+            riscv_emit::emit_set_less_than(out, TempRegister{2}, TempRegister{0}, TempRegister{1});
+            break;
+        }
+        case IntegerComparison::Kind::LessThanEqual: {
+            riscv_emit::emit_set_less_than(out, TempRegister{2}, TempRegister{1}, TempRegister{0});
+            riscv_emit::emit_xor_immediate(out, TempRegister{2}, TempRegister{2}, 1);
+            break;
+        }
+        default:
+            break;
+    }
+
+    int id = riscv_emit::if_then_else_fi_label_count++;
+    std::string true_lbl = "int_comp_true_" + std::to_string(id);
+    std::string end_lbl  = "int_comp_end_"  + std::to_string(id);
+
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{2}, true_lbl + "_false");
+
+    riscv_emit::emit_load_address(out, ArgumentRegister{0},
+                                 static_constants_->use_bool_constant(true));
+    riscv_emit::emit_jump(out, end_lbl);
+
+    riscv_emit::emit_label(out, true_lbl + "_false");
+    riscv_emit::emit_load_address(out, ArgumentRegister{0},
+                                 static_constants_->use_bool_constant(false));
+
+    riscv_emit::emit_label(out, end_lbl);
+}
+
+
+void ExpressionCodegen::emit_equality_comparison(
+    std::ostream& out,
+    const EqualityComparison* equality_comparison
+) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Equality Comparison");
+
+    generate(out, equality_comparison->get_lhs());
+    riscv_emit::emit_push_register(out, ArgumentRegister{0});
+
+    generate(out, equality_comparison->get_rhs());
+    riscv_emit::emit_move(out, TempRegister{1}, ArgumentRegister{0});
+
+    riscv_emit::emit_pop_into_register(out, TempRegister{0}); 
+
+    int id = riscv_emit::if_then_else_fi_label_count++;
+    std::string false_lbl = "eq_comp_false_" + std::to_string(id);
+    std::string true_lbl  = "eq_comp_true_"  + std::to_string(id);
+    std::string end_lbl   = "eq_comp_end_"   + std::to_string(id);
+
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{0}, "eq_lhs_void_" + std::to_string(id));
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{1}, false_lbl);
+
+    int lhs_type = equality_comparison->get_lhs()->get_type();
+    std::string type_name(class_table_->get_name(lhs_type));
+
+    if (type_name == "Int" || type_name == "Bool") {
+        riscv_emit::emit_load_word(out, TempRegister{2}, MemoryLocation{12, TempRegister{0}}); 
+        riscv_emit::emit_load_word(out, TempRegister{3}, MemoryLocation{12, TempRegister{1}}); 
+        riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{2}, TempRegister{3});
+        riscv_emit::emit_set_equal_zero(out, TempRegister{4}, TempRegister{4});
+        riscv_emit::emit_branch_equal_zero(out, TempRegister{4}, false_lbl);
+        riscv_emit::emit_jump(out, true_lbl);
+    } else {
+        riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{0}, TempRegister{1});
+        riscv_emit::emit_set_equal_zero(out, TempRegister{4}, TempRegister{4});
+        riscv_emit::emit_branch_equal_zero(out, TempRegister{4}, false_lbl);
+        riscv_emit::emit_jump(out, true_lbl);
+    }
+
+    riscv_emit::emit_label(out, "eq_lhs_void_" + std::to_string(id));
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{1}, true_lbl);
+    riscv_emit::emit_jump(out, false_lbl);
+
+    riscv_emit::emit_label(out, true_lbl);
+    riscv_emit::emit_load_address(out, ArgumentRegister{0},
+                                  static_constants_->use_bool_constant(true));
+    riscv_emit::emit_jump(out, end_lbl);
+
+    riscv_emit::emit_label(out, false_lbl);
+    riscv_emit::emit_load_address(out, ArgumentRegister{0},
+                                  static_constants_->use_bool_constant(false));
 
     riscv_emit::emit_label(out, end_lbl);
 }
