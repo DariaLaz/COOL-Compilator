@@ -138,3 +138,16 @@ string StaticConstants::unescape_string_literal(const string& raw) {
 
     return out;
 }
+
+
+string StaticConstants::use_default_value(string class_name) {
+    if (class_name == "Int") {
+        return use_int_constant(0);
+    } else if (class_name == "Bool") {
+        return use_bool_constant(false);
+    } else if (class_name == "String") {
+        return use_string_constant("");
+    } else {
+        return class_name + "_protObj";
+    }
+}

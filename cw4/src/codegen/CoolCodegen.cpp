@@ -53,6 +53,7 @@ void CoolCodegen::emit_methods(ostream &out) {
             riscv_emit::emit_empty_line(out);
 
             expression_codegen_.reset_frame();
+            expression_codegen_.set_current_class(class_index);
             expression_codegen_.generate(out, class_table_->get_method_body(class_index, method_name));
             
             riscv_emit::emit_empty_line(out);
@@ -365,27 +366,17 @@ String_init:\n\
 \n\
 .globl Main_init\n\
 Main_init:\n\
-    # stack discipline:\n\
-    # callee:\n\
-    # - activation frame starts at the stack pointer\n\
     add fp, sp, 0\n\
-    # - previous return address is first on the activation frame\n\
     sw ra, 0(sp)\n\
-    addi sp, sp, -4\n\
-    # before using saved registers (s1 -- s11), push them on the stack\n\
-\n\
-    # no op\n\
-\n\
-    # stack discipline:\n\
-    # callee:\n\
-    # - restore used saved registers (s1 -- s11) from the stack\n\
-    # - ra is restored from first word on activation frame\n\
+    addi sp, sp, -4\n";
+
+    int class_index = class_table_->get_index("Main");
+    expression_codegen_.emit_attributes(out, class_table_->get_attributes(class_index), class_index);
+    
+out<< "\n\
     lw ra, 0(fp)\n\
-    # - ra, arguments, and control link are popped from the stack\n\
     addi sp, sp, 8\n\
-    # - fp is restored from control link\n\
     lw fp, 0(sp)\n\
-    # - result is stored in a0\n\
     ret\n\
 \n";
 

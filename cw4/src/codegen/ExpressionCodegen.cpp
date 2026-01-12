@@ -37,6 +37,14 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_int_constant(out, int_constant);
     }
 
+    if (auto assignment = dynamic_cast<const Assignment *>(expr)) {
+        return emit_assignment(out, assignment);
+    }
+
+    if (auto method_invocation = dynamic_cast<const MethodInvocation *>(expr)) {
+        return emit_method_invocation(out, method_invocation);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -70,10 +78,12 @@ void ExpressionCodegen::emit_let_in(std::ostream& out, const LetIn* let_in) {
     begin_scope();
 
     for (const auto& vardecl : let_in->get_vardecls()) {
-        if (vardecl->get_initializer()) {
+        if (vardecl->has_initializer()) {
             generate(out, vardecl->get_initializer());
         } else {
-            riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
+            string class_name(class_table_->get_name(vardecl->get_type()));
+            string label = static_constants_->use_default_value(class_name);
+            riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
         }
 
         int fp_offset = -frame_depth_bytes_;
@@ -132,7 +142,7 @@ int ExpressionCodegen::lookup_var(const std::string& name){
         auto it = scopes_[i].find(name);
         if (it != scopes_[i].end()) return it->second;
     }
-    return 0;
+    return -1;
   }
 
 void ExpressionCodegen::reset_frame() {
@@ -189,4 +199,80 @@ void ExpressionCodegen::emit_sequence(ostream& out, const Sequence* sequence) {
 void ExpressionCodegen::emit_int_constant(ostream& out, const IntConstant* int_constant) {
     string label = static_constants_->use_int_constant(int_constant->get_value());
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
+}
+
+void ExpressionCodegen::emit_assignment(ostream& out, const Assignment* assignment) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Assignment");
+    generate(out, assignment->get_value());
+
+    int fp_offset = lookup_var(assignment->get_assignee_name());
+    riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
+}
+
+
+// TODO not working yet
+void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocation* mi) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Method Invocation");
+
+    const auto& args = mi->get_arguments();
+    const int argc = args.size();
+
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); 
+
+    push_register(out, FramePointer{});
+    
+    if (argc > 0) {
+        riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4 * argc);
+        frame_depth_bytes_ += 4 * argc;
+    }
+    for (int i = 0; i < argc; ++i) {
+        generate(out, args[i]);
+        riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{4 * i, StackPointer{}});
+    }
+
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+
+    int method_index = class_table_->get_method_index(mi->get_type(), mi->get_method_name());
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}}); // dispTab ptr
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{4 * method_index, TempRegister{1}});
+    riscv_emit::emit_jump_and_link_register(out, TempRegister{1});
+
+    // pop_words(1 + argc);
+}
+
+
+void ExpressionCodegen::emit_attributes(
+    std::ostream &out,
+    const std::vector<std::string>& attribute_names,
+    int class_index
+) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Init attributes");
+
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0});
+
+    const std::string current_class_name(class_table_->get_name(class_index));
+
+    for (const std::string& attr_name : attribute_names) {
+        const Expr* init = class_table_->transitive_get_attribute_initializer(current_class_name, attr_name);
+
+        if (init) {
+            generate(out, init); 
+        } else {
+            auto opt_type = class_table_->transitive_get_attribute_type(class_index, attr_name);
+            int type_index = opt_type ? *opt_type : 0;
+            string class_name(class_table_->get_name(type_index));
+            string label = static_constants_->use_default_value(class_name);
+            riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
+        }
+
+        riscv_emit::emit_empty_line(out);
+        int fp_offset = lookup_var(attr_name);
+        riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
+    }
+    
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
 }

@@ -22,6 +22,7 @@ class StaticConstants {
     string use_string_constant(const string& str);
     string use_bool_constant(bool value);
     string use_int_constant(int value);
+    string use_default_value(string class_name);
 
     void emit_all(ostream &out);
 };

@@ -5,6 +5,7 @@
 #include "StaticConstants.h"
 #include "Register.h"
 #include "semantics/ClassTable.h"
+
 #include "semantics/typed-ast/Expr.h"
 #include "semantics/typed-ast/StaticDispatch.h"
 #include "semantics/typed-ast/StringConstant.h"
@@ -14,6 +15,9 @@
 #include "semantics/typed-ast/ObjectReference.h"
 #include "semantics/typed-ast/Sequence.h"
 #include "semantics/typed-ast/IntConstant.h"
+#include "semantics/typed-ast/Assignment.h"
+#include "semantics/typed-ast/MethodInvocation.h"
+
 
 using namespace std;
 
@@ -21,6 +25,7 @@ class ExpressionCodegen {
   private:
     StaticConstants* static_constants_;
     ClassTable* class_table_;
+    int current_class_index_ = 0;
 
     void emit_static_dispatch(ostream &out, const StaticDispatch* static_dispatch);
     void emit_string_constant(std::ostream& out, const StringConstant* string_constant);
@@ -30,8 +35,16 @@ class ExpressionCodegen {
     void emit_object_reference(ostream &out, const ObjectReference* object_reference);
     void emit_sequence(ostream &out, const Sequence* sequence);
     void emit_int_constant(ostream &out, const IntConstant* int_constant);
+    void emit_assignment(ostream &out, const Assignment* assignment);
+    void emit_method_invocation(ostream &out, const MethodInvocation* method_invocation);
     
   public:
+
+  void set_current_class(int class_index) {
+      current_class_index_ = class_index;
+  }
+  void emit_attributes(ostream &out, const vector<string>& attribute_names, int class_index);
+
   ExpressionCodegen(StaticConstants* static_constants)
         : static_constants_(static_constants)
         {}
