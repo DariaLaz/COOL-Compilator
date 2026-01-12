@@ -45,6 +45,14 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_method_invocation(out, method_invocation);
     }
 
+    if (auto if_then_else_fi = dynamic_cast<const IfThenElseFi *>(expr)) {
+        return emit_if_then_else_fi(out, if_then_else_fi);
+    }
+
+    if (auto bool_constant = dynamic_cast<const BoolConstant *>(expr)) {
+        return emit_bool_constant(out, bool_constant);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -323,4 +331,32 @@ void ExpressionCodegen::bind_formals(const vector<string>& formals) {
         bind_var(name, offset);
         offset += 4;
     }
+}
+
+
+void ExpressionCodegen::emit_if_then_else_fi(ostream& out, const IfThenElseFi* if_then_else_fi) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "If Then Else Fi");
+
+    int id = riscv_emit::if_then_else_fi_label_count++;
+    std::string else_lbl = "else_branch_" + std::to_string(id);
+    std::string fi_lbl   = "fi_end_" + std::to_string(id);
+
+    generate(out, if_then_else_fi->get_condition());
+
+    riscv_emit::emit_load_word(out, TempRegister{0}, MemoryLocation{12, ArgumentRegister{0}});
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{0}, else_lbl);
+
+    generate(out, if_then_else_fi->get_then_expr());
+    riscv_emit::emit_jump(out, fi_lbl);
+
+    riscv_emit::emit_label(out, else_lbl);
+    generate(out, if_then_else_fi->get_else_expr());
+
+    riscv_emit::emit_label(out, fi_lbl);
+}
+
+void ExpressionCodegen::emit_bool_constant(ostream& out, const BoolConstant* bool_constant) {
+    string label = static_constants_->use_bool_constant(bool_constant->get_value());
+    riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
 }
