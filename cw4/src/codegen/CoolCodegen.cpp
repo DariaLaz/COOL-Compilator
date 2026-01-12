@@ -54,7 +54,13 @@ void CoolCodegen::emit_methods(ostream &out) {
 
             expression_codegen_.reset_frame();
             expression_codegen_.set_current_class(class_index);
+            expression_codegen_.begin_scope();
+             auto formals = class_table_->get_argument_names(class_index, method_name);
+            expression_codegen_.bind_formals(formals);
+
             expression_codegen_.generate(out, class_table_->get_method_body(class_index, method_name));
+            
+            expression_codegen_.end_scope();
             
             riscv_emit::emit_empty_line(out);
             riscv_emit::emit_load_word(out, ReturnAddress{}, MemoryLocation{0, FramePointer{}});

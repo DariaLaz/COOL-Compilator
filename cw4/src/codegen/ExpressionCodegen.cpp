@@ -184,8 +184,35 @@ void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatc
 }
 
 void ExpressionCodegen::emit_object_reference(ostream& out, const ObjectReference* object_reference) {
-    int fp_offset = lookup_var(object_reference->get_name());
-    riscv_emit::emit_load_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
+     string name = object_reference->get_name();
+
+    if (name == "self") {
+        riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
+        return;
+    }
+
+    int fp_offset = lookup_var(name);
+
+    if (fp_offset != -1) {
+        riscv_emit::emit_load_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
+        return;
+    }
+
+       auto all_attrs = class_table_->get_all_attributes(current_class_index_);
+
+    int attr_i = -1;
+    for (int i = 0; i < (int)all_attrs.size(); ++i) {
+        if (all_attrs[i] == name) { attr_i = i; break; }
+    }
+
+    if (attr_i < 0) {
+        riscv_emit::emit_comment(out, "ICE: unknown identifier");
+        riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
+        return;
+    }
+
+    int byte_offset = (3 + attr_i) * 4; 
+    riscv_emit::emit_load_word(out, ArgumentRegister{0}, MemoryLocation{byte_offset, SavedRegister{1}});
 }
 
 void ExpressionCodegen::emit_sequence(ostream& out, const Sequence* sequence) {
@@ -275,4 +302,12 @@ void ExpressionCodegen::emit_attributes(
     
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+}
+
+void ExpressionCodegen::bind_formals(const std::vector<std::string>& formals) {
+    int offset = 8;
+    for (const auto& name : formals) {
+        bind_var(name, offset);
+        offset += 4;
+    }
 }

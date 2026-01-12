@@ -95,6 +95,7 @@ run_test() {
     if $trace; then
         echo "----- ASM: ${s_path} -----"
         sed -n '/# .*Method Implementations/,/# .*Class Name Table/p' "${s_path}" | head -n -1
+        # cat "${s_path}"
         echo "==========================="
         echo
     fi
