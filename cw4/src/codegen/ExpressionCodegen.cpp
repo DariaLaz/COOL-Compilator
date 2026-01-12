@@ -276,12 +276,25 @@ void ExpressionCodegen::emit_attributes(
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Init attributes");
 
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0});
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = self
+
+    auto all_attrs = class_table_->get_all_attributes(class_index);
 
     const string current_class_name(class_table_->get_name(class_index));
 
-    for (int i = 0; i < attribute_names.size(); ++i) {
-        const string& attr_name = attribute_names[i];
+    for (const string& attr_name : attribute_names) {
+        int pos = -1;
+        for (int i = 0; i < (int)all_attrs.size(); ++i) {
+            if (all_attrs[i] == attr_name) { pos = i; break; }
+        }
+        if (pos < 0) {
+            riscv_emit::emit_comment(out, "ICE: attribute not found in layout");
+            continue;
+        }
+
+        int byte_offset = (3 + pos) * 4;
+
+        riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
 
         const Expr* init =
             class_table_->transitive_get_attribute_initializer(current_class_name, attr_name);
@@ -296,9 +309,8 @@ void ExpressionCodegen::emit_attributes(
             riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
         }
 
-        int byte_offset = (3 + i) * 4;
-        riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{byte_offset, TempRegister{0}});
-
+        riscv_emit::emit_store_word(out, ArgumentRegister{0},
+                                    MemoryLocation{byte_offset, TempRegister{0}});
         riscv_emit::emit_empty_line(out);
     }
 
