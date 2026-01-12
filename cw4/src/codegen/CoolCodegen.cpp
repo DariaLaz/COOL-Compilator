@@ -398,26 +398,56 @@ String_init:\n\
     addi sp, sp, 8\n\
     lw fp, 0(sp)\n\
 \n\
-    ret\n\
-\n\
-\n\
-.globl Main_init\n\
-Main_init:\n\
-    add fp, sp, 0\n\
-    sw ra, 0(sp)\n\
-    addi sp, sp, -4\n";
+    ret\n";
 
-    int class_index = class_table_->get_index("Main");
-    expression_codegen_.emit_attributes(out, class_table_->get_attributes(class_index), class_index);
-    
-out<< "\n\
-    lw ra, 0(fp)\n\
-    addi sp, sp, 8\n\
-    lw fp, 0(sp)\n\
-    ret\n\
-\n";
+    vector<string> base = {"Object","IO","Int","Bool","String"};
 
-    // TODO: Fix for main
+    for (const auto& cls : class_names) {
+        if (find(base.begin(), base.end(), cls) != base.end()) continue;
+
+
+        riscv_emit::emit_globl(out, cls + "_init");
+        riscv_emit::emit_label(out, cls + "_init");
+
+        // prologue (same discipline as the provided runtime init functions)
+        riscv_emit::emit_add(out, FramePointer{}, StackPointer{}, ZeroRegister{});
+        riscv_emit::emit_store_word(out, ReturnAddress{}, MemoryLocation{0, StackPointer{}});
+        riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4);
+        riscv_emit::emit_empty_line(out);
+
+        // keep self in t0
+        riscv_emit::emit_add(out, TempRegister{0}, ArgumentRegister{0}, ZeroRegister{});
+        riscv_emit::emit_empty_line(out);
+
+        // parent init call (with control link)
+        int class_index = class_table_->get_index(cls);
+        std::string parent(class_table_->get_name(class_table_->get_parent_index(class_index)));
+
+        riscv_emit::emit_store_word(out, FramePointer{}, MemoryLocation{0, StackPointer{}});
+        riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4);
+        riscv_emit::emit_add(out, ArgumentRegister{0}, TempRegister{0}, ZeroRegister{});
+        riscv_emit::emit_call(out, parent + "_init");
+        riscv_emit::emit_empty_line(out);
+
+        // init attributes of this class
+        expression_codegen_.reset_frame();
+        expression_codegen_.set_current_class(class_index);
+        expression_codegen_.begin_scope();
+        expression_codegen_.emit_attributes(out, class_table_->get_attributes(class_index), class_index);
+        expression_codegen_.end_scope();
+        riscv_emit::emit_empty_line(out);
+
+        // return self
+        riscv_emit::emit_add(out, ArgumentRegister{0}, TempRegister{0}, ZeroRegister{});
+
+        // epilogue 
+        riscv_emit::emit_load_word(out, ReturnAddress{}, MemoryLocation{0, FramePointer{}});
+        riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, 8);
+        riscv_emit::emit_load_word(out, FramePointer{}, MemoryLocation{0, StackPointer{}});
+        riscv_emit::emit_mnemonic(out, Mnemonic::Return);
+        riscv_emit::emit_empty_line(out);
+    }
+
     riscv_emit::emit_empty_line(out);
 }
 

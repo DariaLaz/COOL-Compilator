@@ -269,8 +269,8 @@ void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocat
 }
 
 void ExpressionCodegen::emit_attributes(
-    std::ostream &out,
-    const std::vector<std::string>& attribute_names,
+    ostream &out,
+    const vector<string>& attribute_names,
     int class_index
 ) {
     riscv_emit::emit_empty_line(out);
@@ -278,31 +278,34 @@ void ExpressionCodegen::emit_attributes(
 
     riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0});
 
-    const std::string current_class_name(class_table_->get_name(class_index));
+    const string current_class_name(class_table_->get_name(class_index));
 
-    for (const std::string& attr_name : attribute_names) {
-        const Expr* init = class_table_->transitive_get_attribute_initializer(current_class_name, attr_name);
+    for (int i = 0; i < attribute_names.size(); ++i) {
+        const string& attr_name = attribute_names[i];
+
+        const Expr* init =
+            class_table_->transitive_get_attribute_initializer(current_class_name, attr_name);
 
         if (init) {
-            generate(out, init); 
+            generate(out, init);
         } else {
             auto opt_type = class_table_->transitive_get_attribute_type(class_index, attr_name);
             int type_index = opt_type ? *opt_type : 0;
-            string class_name(class_table_->get_name(type_index));
-            string label = static_constants_->use_default_value(class_name);
+            string type_name(class_table_->get_name(type_index));
+            string label = static_constants_->use_default_value(type_name);
             riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
         }
 
+        int byte_offset = (3 + i) * 4;
+        riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{byte_offset, TempRegister{0}});
+
         riscv_emit::emit_empty_line(out);
-        int fp_offset = lookup_var(attr_name);
-        riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
     }
-    
-    riscv_emit::emit_empty_line(out);
+
     riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
 }
 
-void ExpressionCodegen::bind_formals(const std::vector<std::string>& formals) {
+void ExpressionCodegen::bind_formals(const vector<string>& formals) {
     int offset = 4;
     for (const auto& name : formals) {
         bind_var(name, offset);
