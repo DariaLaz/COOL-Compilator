@@ -44,13 +44,25 @@ void CoolCodegen::emit_methods(ostream &out) {
             riscv_emit::emit_empty_line(out);
             riscv_emit::emit_directive(out, "globl");
             string function_label = class_name + "." + method_name;
-            out<< " " << function_label << endl;;
+            out<< " " << function_label << endl;
             riscv_emit::emit_label(out, function_label);
 
+            // ================================ PROLOGUE =================================
+            // fp = sp
             riscv_emit::emit_add(out, FramePointer{}, StackPointer{}, ZeroRegister{});
+
+            // save ra at 0(fp)
             riscv_emit::emit_store_word(out, ReturnAddress{}, MemoryLocation{0, StackPointer{}});
             riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4);
+
+            // save s1 (we keep self in s1) at -4(fp)
+            riscv_emit::emit_store_word(out, SavedRegister{1}, MemoryLocation{0, StackPointer{}});
+            riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4);
+
+            // s1 = self (a0)
+            riscv_emit::emit_add(out, SavedRegister{1}, ArgumentRegister{0}, ZeroRegister{});
             riscv_emit::emit_empty_line(out);
+            // ============================== END PROLOGUE ===============================
 
             expression_codegen_.reset_frame();
             expression_codegen_.set_current_class(class_index);
@@ -61,14 +73,33 @@ void CoolCodegen::emit_methods(ostream &out) {
             expression_codegen_.generate(out, class_table_->get_method_body(class_index, method_name));
             
             expression_codegen_.end_scope();
-            
-            riscv_emit::emit_empty_line(out);
-            riscv_emit::emit_load_word(out, ReturnAddress{}, MemoryLocation{0, FramePointer{}});
-            riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, 8);
-            riscv_emit::emit_load_word(out, FramePointer{}, MemoryLocation{0, StackPointer{}});
-            riscv_emit::emit_ident(out);
-            riscv_emit::emit_mnemonic(out, Mnemonic::Return);
-            riscv_emit::emit_empty_line(out);
+
+            // ================================ EPILOGUE =================================
+            // restore s1 (saved at -4(fp))
+                riscv_emit::emit_load_word(out, SavedRegister{1}, MemoryLocation{-4, FramePointer{}});
+
+                // restore ra (saved at 0(fp))
+                riscv_emit::emit_load_word(out, ReturnAddress{}, MemoryLocation{0, FramePointer{}});
+
+                // IMPORTANT: caller pushes control link FIRST, then args.
+                // control link is at fp + 4*(argc+1).
+                // We want sp to end up at the control link word (so we can lw fp, 0(sp)).
+                //
+                // Current sp at end of method is: fp - 4*(1 + saved_regs)
+                // (we subtracted 4 for ra slot, and 4 per saved reg)
+                //
+                // Therefore delta = 4*(argc + saved_regs + 2)
+                int saved_regs = 1;                       // we save only s1
+                int argc = (int)formals.size();           // number of method formals
+                int pop_bytes = 4 * (argc + saved_regs + 2);
+                riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, pop_bytes);
+
+                // restore fp from control link (now at 0(sp))
+                riscv_emit::emit_load_word(out, FramePointer{}, MemoryLocation{0, StackPointer{}});
+
+                riscv_emit::emit_mnemonic(out, Mnemonic::Return);
+                riscv_emit::emit_empty_line(out);
+            // ============================== END EPILOGUE ===============================
         }
     }
 

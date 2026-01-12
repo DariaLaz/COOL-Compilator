@@ -65,7 +65,7 @@ class ExpressionCodegen {
   void pop_register(int words_count = 1);
   void pop_words(ostream &out, int words_count);
 
-  int frame_depth_bytes_ = 4;
+  int frame_depth_bytes_ = 8;
   std::vector<std::unordered_map<std::string, int>> scopes_;
 
  

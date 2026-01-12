@@ -56,25 +56,31 @@ void ExpressionCodegen::emit_string_constant(std::ostream& out, const StringCons
 void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch* expr) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Static Dispatch");
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = receiver
+
     push_register(out, FramePointer{});
 
-    int argc = 0;
-    for (const auto& argument : expr->get_arguments()) {
-        generate(out, argument);
+    const auto& args = expr->get_arguments();
+    for (int i = (int)args.size() - 1; i >= 0; --i) {
+        generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
-        ++argc;
     }
+
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
 
     string class_name(class_table_->get_name(expr->get_static_dispatch_type()));
     string method_name = expr->get_method_name();
     riscv_emit::emit_jump_and_link(out, class_name + "." + method_name);
 
-    pop_register(argc + 1);
+    pop_register(1 + args.size());
 }
 
 void ExpressionCodegen::emit_let_in(std::ostream& out, const LetIn* let_in) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Let In");
+
+    riscv_emit::emit_move(out, TempRegister{2}, ArgumentRegister{0}); // t2 = receiver
+
     begin_scope();
 
     for (const auto& vardecl : let_in->get_vardecls()) {
@@ -91,6 +97,8 @@ void ExpressionCodegen::emit_let_in(std::ostream& out, const LetIn* let_in) {
         bind_var(vardecl->get_name(), fp_offset);
     }
 
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{2}); // a0 = receiver
+
     generate(out, let_in->get_body());
 
     riscv_emit::emit_empty_line(out);
@@ -104,14 +112,14 @@ void ExpressionCodegen::emit_new_object(std::ostream& out, const NewObject* new_
     string class_name(class_table_->get_name(new_object->get_type()));
 
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, class_name + "_protObj");
-    
+
     push_register(out, FramePointer{});
     riscv_emit::emit_call(out, "Object.copy");
-    pop_register();
+    pop_register(1);
 
     push_register(out, FramePointer{});
     riscv_emit::emit_call(out, class_name + "_init");
-    pop_register();
+    pop_register(1);
 }
 
 // UTILS
@@ -146,41 +154,39 @@ int ExpressionCodegen::lookup_var(const std::string& name){
   }
 
 void ExpressionCodegen::reset_frame() {
-    frame_depth_bytes_ = 4;
+    frame_depth_bytes_ = 8;
     scopes_.clear();
     begin_scope();
 }
 
 // -----------------------
-
 void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatch* expr) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Dynamic Dispatch");
+
+    // eval receiver -> a0
     generate(out, expr->get_target());
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = receiver
 
-    // save receiver
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0});
-
+    // control link first
     push_register(out, FramePointer{});
 
+    // args reverse
     const auto& args = expr->get_arguments();
     for (int i = (int)args.size() - 1; i >= 0; --i) {
-        generate(out, args[i]); 
+        generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
     }
 
+    // restore receiver
     riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
 
     int method_index = class_table_->get_method_index(expr->get_target()->get_type(), expr->get_method_name());
-
-    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}});
-
-    riscv_emit::emit_load_word(out, TempRegister{1},
-                               MemoryLocation{4 * method_index, TempRegister{1}});
-
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}}); // dispTab
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{4 * method_index, TempRegister{1}});
     riscv_emit::emit_jump_and_link_register(out, TempRegister{1});
 
-    pop_register(1 + args.size());
+    pop_register(1 + (int)args.size()); // ✅ bookkeeping only
 }
 
 void ExpressionCodegen::emit_object_reference(ostream& out, const ObjectReference* object_reference) {
@@ -236,9 +242,6 @@ void ExpressionCodegen::emit_assignment(ostream& out, const Assignment* assignme
     int fp_offset = lookup_var(assignment->get_assignee_name());
     riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
 }
-
-
-// TODO not working yet
 void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocation* mi) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Method Invocation");
@@ -246,29 +249,25 @@ void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocat
     const auto& args = mi->get_arguments();
     const int argc = args.size();
 
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); 
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = receiver
 
     push_register(out, FramePointer{});
-    
-    if (argc > 0) {
-        riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4 * argc);
-        frame_depth_bytes_ += 4 * argc;
-    }
-    for (int i = 0; i < argc; ++i) {
+
+
+    for (int i = argc - 1; i >= 0; --i) {
         generate(out, args[i]);
-        riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{4 * i, StackPointer{}});
+        push_register(out, ArgumentRegister{0});
     }
 
-    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0}); // a0 = receiver
 
-    int method_index = class_table_->get_method_index(mi->get_type(), mi->get_method_name());
-    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}}); // dispTab ptr
+    int method_index = class_table_->get_method_index(current_class_index_, mi->get_method_name());
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}});
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{4 * method_index, TempRegister{1}});
     riscv_emit::emit_jump_and_link_register(out, TempRegister{1});
 
-    // pop_words(1 + argc);
+    pop_register(1 + args.size()); 
 }
-
 
 void ExpressionCodegen::emit_attributes(
     std::ostream &out,
@@ -305,7 +304,7 @@ void ExpressionCodegen::emit_attributes(
 }
 
 void ExpressionCodegen::bind_formals(const std::vector<std::string>& formals) {
-    int offset = 8;
+    int offset = 4;
     for (const auto& name : formals) {
         bind_var(name, offset);
         offset += 4;
