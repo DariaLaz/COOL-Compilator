@@ -19,6 +19,7 @@
 #include "semantics/typed-ast/MethodInvocation.h"
 #include "semantics/typed-ast/IfThenElseFi.h"
 #include "semantics/typed-ast/BoolConstant.h"
+#include "semantics/typed-ast/IsVoid.h"
 
 
 using namespace std;
@@ -41,6 +42,7 @@ class ExpressionCodegen {
     void emit_method_invocation(ostream &out, const MethodInvocation* method_invocation);
     void emit_if_then_else_fi(ostream &out, const IfThenElseFi* if_then_else_fi);
     void emit_bool_constant(ostream &out, const BoolConstant* bool_constant);
+    void emit_is_void(ostream &out, const IsVoid* is_void);
     
   public:
 

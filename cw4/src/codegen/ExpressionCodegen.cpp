@@ -53,6 +53,10 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_bool_constant(out, bool_constant);
     }
 
+    if (auto is_void = dynamic_cast<const IsVoid *>(expr)) {
+        return emit_is_void(out, is_void);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -293,7 +297,10 @@ void ExpressionCodegen::emit_attributes(
     for (const string& attr_name : attribute_names) {
         int pos = -1;
         for (int i = 0; i < (int)all_attrs.size(); ++i) {
-            if (all_attrs[i] == attr_name) { pos = i; break; }
+            if (all_attrs[i] == attr_name) { 
+                pos = i; 
+                break; 
+            }
         }
         if (pos < 0) {
             riscv_emit::emit_comment(out, "ICE: attribute not found in layout");
@@ -314,7 +321,11 @@ void ExpressionCodegen::emit_attributes(
             int type_index = opt_type ? *opt_type : 0;
             string type_name(class_table_->get_name(type_index));
             string label = static_constants_->use_default_value(type_name);
-            riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
+            if (!label.empty()){
+                riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
+            }else{
+                riscv_emit::emit_store_word(out, ZeroRegister{}, MemoryLocation{byte_offset, TempRegister{0}});
+            }
         }
 
         riscv_emit::emit_store_word(out, ArgumentRegister{0},
@@ -359,4 +370,27 @@ void ExpressionCodegen::emit_if_then_else_fi(ostream& out, const IfThenElseFi* i
 void ExpressionCodegen::emit_bool_constant(ostream& out, const BoolConstant* bool_constant) {
     string label = static_constants_->use_bool_constant(bool_constant->get_value());
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
+}
+
+void ExpressionCodegen::emit_is_void(std::ostream& out, const IsVoid* is_void) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "IsVoid");
+
+    generate(out, is_void->get_subject());
+
+    int id = riscv_emit::if_then_else_fi_label_count++;
+    std::string true_lbl = "isvoid_true_" + std::to_string(id);
+    std::string end_lbl  = "isvoid_end_"  + std::to_string(id);
+
+    riscv_emit::emit_branch_equal_zero(out, ArgumentRegister{0}, true_lbl);
+
+    riscv_emit::emit_load_address(out, ArgumentRegister{0},
+                                 static_constants_->use_bool_constant(false));
+    riscv_emit::emit_jump(out, end_lbl);
+
+    riscv_emit::emit_label(out, true_lbl);
+    riscv_emit::emit_load_address(out, ArgumentRegister{0},
+                                 static_constants_->use_bool_constant(true));
+
+    riscv_emit::emit_label(out, end_lbl);
 }

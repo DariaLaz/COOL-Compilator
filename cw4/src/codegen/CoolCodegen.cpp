@@ -230,10 +230,22 @@ void CoolCodegen::emit_prototype_table(ostream &out, const string &class_name, s
 
         for (string &attr_name : attributes) {
             auto attr_type_index = class_table_->get_attribute_type(class_index, attr_name);
-            if (attr_type_index) {
-                string_view attr_type_sv = class_table_->get_name(attr_type_index.value());
-                string attr_type(attr_type_sv.data(), attr_type_sv.size());
-                riscv_emit::emit_word(out, attr_type + "_protObj");
+            if (!attr_type_index) {
+                riscv_emit::emit_word(out, 0);
+                continue;
+            }
+
+            string_view attr_type_sv = class_table_->get_name(attr_type_index.value());
+            string attr_type(attr_type_sv.data(), attr_type_sv.size());
+
+            if (attr_type == "Int") {
+                riscv_emit::emit_word(out, static_constants_.use_int_constant(0));
+            } else if (attr_type == "Bool") {
+                riscv_emit::emit_word(out, static_constants_.use_bool_constant("false"));
+            } else if (attr_type == "String") {
+                riscv_emit::emit_word(out, static_constants_.use_default_value("String"));
+            } else {
+                riscv_emit::emit_word(out, 0);
             }
         }
     }

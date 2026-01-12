@@ -148,6 +148,6 @@ string StaticConstants::use_default_value(string class_name) {
     } else if (class_name == "String") {
         return use_string_constant("");
     } else {
-        return class_name + "_protObj";
+        return "";
     }
 }
