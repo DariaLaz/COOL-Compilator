@@ -32,9 +32,12 @@ string StaticConstants::use_int_constant(int value) {
 void StaticConstants::emit_all(ostream &out) {
     riscv_emit::emit_header_comment(out, "Static Constants");
 
-    for (const auto& [str, label] : string_to_label) {
-        string unescaped_str = unescape_string_literal(str);
-        size_t str_len = unescaped_str.length() - 2; // -2 for quotes
+    for (const auto& [raw, label] : string_to_label) {
+        string inner = strip_quotes_if_any(raw);
+        string content = unescape_string_literal(inner);
+
+        size_t str_len = content.size();
+
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, label + ".length");
         riscv_emit::emit_word(out, 2);
@@ -47,15 +50,18 @@ void StaticConstants::emit_all(ostream &out) {
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, label + ".content");
         riscv_emit::emit_word(out, 4);
-        
-        str_len += 1; // +1 for null terminator
-        size_t obj_size = ceil(str_len / 4.0) + 4;
+
+        int str_len_with_null = str_len + 1;
+        int obj_size = ceil(str_len_with_null / 4.0) + 4;
+
         riscv_emit::emit_word(out, obj_size);
         riscv_emit::emit_word(out, "String_dispTab");
         riscv_emit::emit_word(out, label + ".length");
-        riscv_emit::emit_string(out, str, "");
 
-        for (size_t i = str_len; i % 4 != 0; ++i) {
+        string asm_literal = "\"" + escape_for_gas_string(content) + "\"";
+        riscv_emit::emit_string(out, asm_literal, "");
+
+        for (size_t i = str_len_with_null; i % 4 != 0; ++i) {
             riscv_emit::emit_byte(out, 0);
         }
 
@@ -150,4 +156,33 @@ string StaticConstants::use_default_value(string class_name) {
     } else {
         return "";
     }
+}
+
+string StaticConstants::strip_quotes_if_any(const string& s) {
+    if (s.size() >= 2 && s.front() == '"' && s.back() == '"') {
+        return s.substr(1, s.size() - 2);
+    }
+    return s;
+}
+
+string StaticConstants::escape_for_gas_string(const string& s) {
+    string out;
+    out.reserve(s.size() + 8);
+
+    for (char c : s) {
+        switch (c) {
+            case '\\': out += "\\\\"; break;
+            case '"':  out += "\\\""; break;
+            case '\n': out += "\\n"; break;
+            case '\t': out += "\\t"; break;
+            case '\r': out += "\\r"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\0': out += "\\0"; break;
+            default:
+                out += c;
+                break;
+        }
+    }
+    return out;
 }

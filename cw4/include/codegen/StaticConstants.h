@@ -18,6 +18,8 @@ class StaticConstants {
     
     unordered_map<int, string> int_to_label;
     static string unescape_string_literal(const string& raw);
+    static string strip_quotes_if_any(const string& s);
+    static string escape_for_gas_string(const string& s);
   public:
     string use_string_constant(const string& str);
     string use_bool_constant(bool value);

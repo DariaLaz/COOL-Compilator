@@ -369,8 +369,8 @@ void ExpressionCodegen::emit_if_then_else_fi(ostream& out, const IfThenElseFi* i
 
     generate(out, if_then_else_fi->get_condition());
 
-    riscv_emit::emit_load_word(out, TempRegister{0}, MemoryLocation{12, ArgumentRegister{0}});
-    riscv_emit::emit_branch_equal_zero(out, TempRegister{0}, else_lbl);
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{12, ArgumentRegister{0}});
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{1}, else_lbl);
 
     generate(out, if_then_else_fi->get_then_expr());
     riscv_emit::emit_jump(out, fi_lbl);
@@ -386,6 +386,7 @@ void ExpressionCodegen::emit_bool_constant(ostream& out, const BoolConstant* boo
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
 }
 
+// TODO fix
 void ExpressionCodegen::emit_is_void(std::ostream& out, const IsVoid* is_void) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "IsVoid");
@@ -409,6 +410,7 @@ void ExpressionCodegen::emit_is_void(std::ostream& out, const IsVoid* is_void) {
     riscv_emit::emit_label(out, end_lbl);
 }
 
+// TODO fix
 void ExpressionCodegen::emit_integer_comparison(
     std::ostream& out,
     const IntegerComparison* integer_comparison
@@ -460,7 +462,7 @@ void ExpressionCodegen::emit_integer_comparison(
     riscv_emit::emit_label(out, end_lbl);
 }
 
-
+// TODO fix
 void ExpressionCodegen::emit_equality_comparison(
     std::ostream& out,
     const EqualityComparison* equality_comparison
