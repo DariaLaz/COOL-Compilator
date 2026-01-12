@@ -160,33 +160,30 @@ void ExpressionCodegen::reset_frame() {
 }
 
 // -----------------------
+
 void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatch* expr) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Dynamic Dispatch");
 
-    // eval receiver -> a0
     generate(out, expr->get_target());
     riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = receiver
 
-    // control link first
     push_register(out, FramePointer{});
 
-    // args reverse
     const auto& args = expr->get_arguments();
     for (int i = (int)args.size() - 1; i >= 0; --i) {
         generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
     }
 
-    // restore receiver
-    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0}); // a0 = receiver
 
     int method_index = class_table_->get_method_index(expr->get_target()->get_type(), expr->get_method_name());
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}}); // dispTab
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{4 * method_index, TempRegister{1}});
     riscv_emit::emit_jump_and_link_register(out, TempRegister{1});
 
-    pop_register(1 + (int)args.size()); // ✅ bookkeeping only
+    pop_register(1 + (int)args.size());
 }
 
 void ExpressionCodegen::emit_object_reference(ostream& out, const ObjectReference* object_reference) {
@@ -242,6 +239,7 @@ void ExpressionCodegen::emit_assignment(ostream& out, const Assignment* assignme
     int fp_offset = lookup_var(assignment->get_assignee_name());
     riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
 }
+
 void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocation* mi) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Method Invocation");
@@ -249,7 +247,8 @@ void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocat
     const auto& args = mi->get_arguments();
     const int argc = args.size();
 
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = receiver
+    riscv_emit::emit_move(out, TempRegister{0}, SavedRegister{1}); // t0 = self
+
 
     push_register(out, FramePointer{});
 
@@ -259,14 +258,14 @@ void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocat
         push_register(out, ArgumentRegister{0});
     }
 
-    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0}); // a0 = receiver
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0}); // a0 = self
 
     int method_index = class_table_->get_method_index(current_class_index_, mi->get_method_name());
-    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}});
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}}); // dispTab
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{4 * method_index, TempRegister{1}});
     riscv_emit::emit_jump_and_link_register(out, TempRegister{1});
 
-    pop_register(1 + args.size()); 
+    pop_register(1 + argc);
 }
 
 void ExpressionCodegen::emit_attributes(
