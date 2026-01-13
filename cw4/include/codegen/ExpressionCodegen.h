@@ -22,6 +22,7 @@
 #include "semantics/typed-ast/IsVoid.h"
 #include "semantics/typed-ast/IntegerComparison.h"
 #include "semantics/typed-ast/EqualityComparison.h"
+#include "semantics/typed-ast/WhileLoopPool.h"
 
 
 using namespace std;
@@ -47,6 +48,7 @@ class ExpressionCodegen {
     void emit_is_void(ostream &out, const IsVoid* is_void);
     void emit_integer_comparison(ostream &out, const IntegerComparison* integer_comparison);
     void emit_equality_comparison(ostream &out, const EqualityComparison* equality_comparison);
+    void emit_while_loop_pool(ostream &out, const WhileLoopPool* while_loop_pool);
     
   public:
 

@@ -65,6 +65,10 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_equality_comparison(out, equality_comparison);
     }
 
+    if (auto while_loop_pool = dynamic_cast<const WhileLoopPool *>(expr)) {
+        return emit_while_loop_pool(out, while_loop_pool);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -76,7 +80,11 @@ void ExpressionCodegen::emit_string_constant(std::ostream& out, const StringCons
 void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch* expr) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Static Dispatch");
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = receiver
+
+
+    generate(out, expr->get_target());
+
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0});
 
     push_register(out, FramePointer{});
 
@@ -91,8 +99,6 @@ void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch*
     string class_name(class_table_->get_name(expr->get_static_dispatch_type()));
     string method_name = expr->get_method_name();
     riscv_emit::emit_jump_and_link(out, class_name + "." + method_name);
-
-    pop_register(1 + args.size());
 }
 
 void ExpressionCodegen::emit_let_in(std::ostream& out, const LetIn* let_in) {
@@ -254,10 +260,28 @@ void ExpressionCodegen::emit_int_constant(ostream& out, const IntConstant* int_c
 void ExpressionCodegen::emit_assignment(ostream& out, const Assignment* assignment) {
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Assignment");
+
     generate(out, assignment->get_value());
 
     int fp_offset = lookup_var(assignment->get_assignee_name());
-    riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
+    if (fp_offset != -1) {
+        riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
+        return;
+    }
+
+    auto all_attrs = class_table_->get_all_attributes(current_class_index_);
+    int attr_i = -1;
+    for (int i = 0; i < (int)all_attrs.size(); ++i) {
+        if (all_attrs[i] == assignment->get_assignee_name()) { attr_i = i; break; }
+    }
+
+    if (attr_i < 0) {
+        riscv_emit::emit_comment(out, "ICE: assignment to unknown identifier");
+        return;
+    }
+
+    int byte_offset = (3 + attr_i) * 4;
+    riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{byte_offset, SavedRegister{1}});
 }
 
 void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocation* mi) {
@@ -517,4 +541,29 @@ void ExpressionCodegen::emit_equality_comparison(
                                   static_constants_->use_bool_constant(false));
 
     riscv_emit::emit_label(out, end_lbl);
+}
+
+
+void ExpressionCodegen::emit_while_loop_pool(ostream& out, const WhileLoopPool* w) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "While Loop");
+
+    int id = riscv_emit::while_loop_pool_label_count++;
+    string begin_lbl = "while_begin_" + to_string(id);
+    string end_lbl   = "while_end_"   + to_string(id);
+
+    riscv_emit::emit_label(out, begin_lbl);
+
+    generate(out, w->get_condition());
+
+    riscv_emit::emit_load_word(out, TempRegister{0}, MemoryLocation{12, ArgumentRegister{0}});
+
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{0}, end_lbl);
+
+    generate(out, w->get_body());
+
+    riscv_emit::emit_jump(out, begin_lbl);
+    riscv_emit::emit_label(out, end_lbl);
+
+    riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
 }
