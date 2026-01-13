@@ -81,6 +81,10 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_arithmetic(out, arithmetic);
     }
 
+    if (auto parenthesized_expr = dynamic_cast<const ParenthesizedExpr *>(expr)) {
+        return emit_parenthesized_expr(out, parenthesized_expr);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -658,4 +662,11 @@ void ExpressionCodegen::emit_arithmetic(std::ostream& out, const Arithmetic* ari
     pop_register(1);
 
     riscv_emit::emit_store_word(out, SavedRegister{2}, MemoryLocation{12, ArgumentRegister{0}});
+}
+
+void ExpressionCodegen::emit_parenthesized_expr(
+    std::ostream& out,
+    const ParenthesizedExpr* parenthesized_expr
+) {
+    generate(out, parenthesized_expr->get_contents());
 }
