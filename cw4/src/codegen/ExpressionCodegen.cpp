@@ -77,6 +77,10 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_boolean_negation(out, boolean_negation);
     }
 
+    if (auto arithmetic = dynamic_cast<const Arithmetic *>(expr)) {
+        return emit_arithmetic(out, arithmetic);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -614,4 +618,44 @@ void ExpressionCodegen::emit_boolean_negation(
     pop_register(1);
 
     riscv_emit::emit_store_word(out, TempRegister{3}, MemoryLocation{12, ArgumentRegister{0}});
+}
+void ExpressionCodegen::emit_arithmetic(std::ostream& out, const Arithmetic* arithmetic) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Arithmetic");
+
+    generate(out, arithmetic->get_lhs());
+    push_register(out, ArgumentRegister{0});
+
+    generate(out, arithmetic->get_rhs());
+    riscv_emit::emit_move(out, TempRegister{3}, ArgumentRegister{0}); 
+
+    riscv_emit::emit_load_word(out, TempRegister{4}, MemoryLocation{4, StackPointer{}}); 
+    pop_words(out, 1);
+
+    riscv_emit::emit_load_word(out, TempRegister{3}, MemoryLocation{12, TempRegister{3}});
+    riscv_emit::emit_load_word(out, TempRegister{4}, MemoryLocation{12, TempRegister{4}});
+
+    switch (arithmetic->get_kind()) {
+        case Arithmetic::Kind::Addition:
+            riscv_emit::emit_add(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+            break;
+        case Arithmetic::Kind::Subtraction:
+            riscv_emit::emit_subtract(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+            break;
+        case Arithmetic::Kind::Multiplication:
+            riscv_emit::emit_multiply(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+            break;
+        case Arithmetic::Kind::Division:
+            riscv_emit::emit_divide(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+            break;
+        default:
+            break;
+    }
+
+    riscv_emit::emit_load_address(out, ArgumentRegister{0}, "Int_protObj");
+    push_register(out, FramePointer{});
+    riscv_emit::emit_call(out, "Object.copy");
+    pop_register(1);
+
+    riscv_emit::emit_store_word(out, SavedRegister{2}, MemoryLocation{12, ArgumentRegister{0}});
 }
