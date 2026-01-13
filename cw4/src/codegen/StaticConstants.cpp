@@ -33,23 +33,23 @@ void StaticConstants::emit_all(ostream &out) {
     riscv_emit::emit_header_comment(out, "Static Constants");
 
     for (const auto& [raw, label] : string_to_label) {
-        string inner = strip_quotes_if_any(raw);
+        string inner   = strip_quotes_if_any(raw);
         string content = unescape_string_literal(inner);
 
         size_t str_len = content.size();
 
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, label + ".length");
-        riscv_emit::emit_word(out, 2);
-        riscv_emit::emit_word(out, 4);
-        riscv_emit::emit_word(out, 0);
-        riscv_emit::emit_word(out, str_len);
-
+        riscv_emit::emit_word(out, 3);                 
+        riscv_emit::emit_word(out, 4);                 
+        riscv_emit::emit_word(out, 0);                 
+        riscv_emit::emit_word(out, str_len);      
         riscv_emit::emit_empty_line(out);
+
 
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, label + ".content");
-        riscv_emit::emit_word(out, 4);
+        riscv_emit::emit_word(out, 5);                
 
         int str_len_with_null = str_len + 1;
         int obj_size = ceil(str_len_with_null / 4.0) + 4;
@@ -71,7 +71,7 @@ void StaticConstants::emit_all(ostream &out) {
     if (is_true_used) {
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, "bool_const_true");
-        riscv_emit::emit_word(out, 3);
+        riscv_emit::emit_word(out, 4); 
         riscv_emit::emit_word(out, 4);
         riscv_emit::emit_word(out, 0);
         riscv_emit::emit_word(out, 1);
@@ -81,7 +81,7 @@ void StaticConstants::emit_all(ostream &out) {
     if (is_false_used) {
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, "bool_const_false");
-        riscv_emit::emit_word(out, 3);
+        riscv_emit::emit_word(out, 4); 
         riscv_emit::emit_word(out, 4);
         riscv_emit::emit_word(out, 0);
         riscv_emit::emit_word(out, 0);
@@ -91,26 +91,25 @@ void StaticConstants::emit_all(ostream &out) {
     for (const auto& [value, label] : int_to_label) {
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, label);
-        riscv_emit::emit_word(out, 2);
+        riscv_emit::emit_word(out, 3); 
         riscv_emit::emit_word(out, 4);
         riscv_emit::emit_word(out, 0);
         riscv_emit::emit_word(out, value);
         riscv_emit::emit_empty_line(out);
     }
 
-
-
-    out<<".globl _bool_tag\n\
-_bool_tag:\n\
-    .word 3\n\
-\n\
-.globl _int_tag\n\
-_int_tag:\n\
-    .word 2\n\
-\n\
-.globl _string_tag\n\
-_string_tag:\n\
-    .word 4\n";
+    out <<
+        ".globl _bool_tag\n"
+        "_bool_tag:\n"
+        "    .word 4\n"
+        "\n"
+        ".globl _int_tag\n"
+        "_int_tag:\n"
+        "    .word 3\n"
+        "\n"
+        ".globl _string_tag\n"
+        "_string_tag:\n"
+        "    .word 5\n";
 }
 
 string StaticConstants::unescape_string_literal(const string& raw) {

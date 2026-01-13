@@ -198,7 +198,7 @@ void CoolCodegen::emit_prototype_table(ostream &out, const string &class_name, s
     riscv_emit::emit_directive(out, "globl");
     out << " " << class_name << "_protObj" << endl;
     riscv_emit::emit_label(out, class_name + "_protObj");
-    riscv_emit::emit_word(out, index);
+    riscv_emit::emit_word(out, class_table_->get_index(class_name));
 
     
     if (class_name == "Object") {

@@ -1,5 +1,6 @@
 #include "ExpressionCodegen.h"
 
+#include <algorithm>
 #include "codegen/CodeEmitter.h"
 
 using namespace std;
@@ -83,6 +84,10 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
 
     if (auto parenthesized_expr = dynamic_cast<const ParenthesizedExpr *>(expr)) {
         return emit_parenthesized_expr(out, parenthesized_expr);
+    }
+
+    if (auto case_of_esac = dynamic_cast<const CaseOfEsac *>(expr)) {
+        return emit_case_of_esac(out, case_of_esac);
     }
 
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
@@ -336,58 +341,43 @@ void ExpressionCodegen::emit_attributes(
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Init attributes");
 
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = self
 
     auto all_attrs = class_table_->get_all_attributes(class_index);
-
     const string current_class_name(class_table_->get_name(class_index));
 
     for (const string& attr_name : attribute_names) {
         int pos = -1;
         for (int i = 0; i < (int)all_attrs.size(); ++i) {
-            if (all_attrs[i] == attr_name) { 
-                pos = i; 
-                break; 
-            }
+            if (all_attrs[i] == attr_name) { pos = i; break; }
         }
-        if (pos < 0) {
-            riscv_emit::emit_comment(out, "ICE: attribute not found in layout");
-            continue;
-        }
+        if (pos < 0) continue;
 
         int byte_offset = (3 + pos) * 4;
 
-        riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+        riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
 
         const Expr* init =
             class_table_->transitive_get_attribute_initializer(current_class_name, attr_name);
 
         if (init) {
             generate(out, init);
-            riscv_emit::emit_store_word(out, ArgumentRegister{0},
-                                    MemoryLocation{byte_offset, TempRegister{0}});
         } else {
             auto opt_type = class_table_->transitive_get_attribute_type(class_index, attr_name);
             int type_index = opt_type ? *opt_type : 0;
             string type_name(class_table_->get_name(type_index));
             string label = static_constants_->use_default_value(type_name);
 
-            if (!label.empty()) {
-                riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
-                riscv_emit::emit_store_word(out, ArgumentRegister{0},
-                                            MemoryLocation{byte_offset, TempRegister{0}});
-            } else {
-                riscv_emit::emit_store_word(out, ZeroRegister{},
-                                            MemoryLocation{byte_offset, TempRegister{0}});
-            }
+            if (!label.empty()) riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
+            else riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
         }
 
         riscv_emit::emit_store_word(out, ArgumentRegister{0},
-                                    MemoryLocation{byte_offset, TempRegister{0}});
+                                    MemoryLocation{byte_offset, SavedRegister{1}});
+
         riscv_emit::emit_empty_line(out);
     }
 
-    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+    riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
 }
 
 void ExpressionCodegen::bind_formals(const vector<string>& formals) {
@@ -404,8 +394,8 @@ void ExpressionCodegen::emit_if_then_else_fi(ostream& out, const IfThenElseFi* i
     riscv_emit::emit_comment(out, "If Then Else Fi");
 
     int id = riscv_emit::if_then_else_fi_label_count++;
-    std::string else_lbl = "else_branch_" + std::to_string(id);
-    std::string fi_lbl   = "fi_end_" + std::to_string(id);
+    string else_lbl = "else_branch_" + to_string(id);
+    string fi_lbl   = "fi_end_" + to_string(id);
 
     generate(out, if_then_else_fi->get_condition());
 
@@ -669,4 +659,99 @@ void ExpressionCodegen::emit_parenthesized_expr(
     const ParenthesizedExpr* parenthesized_expr
 ) {
     generate(out, parenthesized_expr->get_contents());
+}
+
+void ExpressionCodegen::emit_case_of_esac(std::ostream& out, const CaseOfEsac* e) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Case Of Esac");
+
+    generate(out, e->get_multiplex());
+    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = obj
+
+    int id = riscv_emit::case_of_esac_count++;
+    std::string end_lbl      = "case_end_" + std::to_string(id);
+    std::string void_lbl     = "case_void_" + std::to_string(id);
+    std::string no_match_lbl = "case_no_match_" + std::to_string(id);
+
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{0}, void_lbl);
+
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{0, TempRegister{0}}); // t1 = tag
+
+    vector<const CaseOfEsac::Case*> cases;
+    cases.reserve(e->get_cases().size());
+    for (const auto& cs : e->get_cases()) cases.push_back(&cs);
+
+    sort(cases.begin(), cases.end(),
+        [this](const CaseOfEsac::Case* a, const CaseOfEsac::Case* b) {
+            int ta = a->get_type();
+            int tb = b->get_type();
+            if (ta == tb) return false;
+
+            bool a_sub_b = class_table_->is_subclass_of(ta, tb);
+            bool b_sub_a = class_table_->is_subclass_of(tb, ta);
+
+            if (a_sub_b != b_sub_a) return a_sub_b;
+            return ta < tb;
+        });
+
+    for (const auto* cs : cases) {
+        int T = cs->get_type();
+
+        string br_lbl   = "case_branch_" + to_string(id) + "_" + to_string(T);
+        string next_lbl = br_lbl + "_next";
+
+        int min_tag = T, max_tag = T;
+        bool first = true;
+
+        // TODO: check
+        int n = class_table_->get_num_of_classes();
+        for (int c = 0; c < n; ++c) {
+            if (class_table_->is_subclass_of(c, T)) {
+                if (first) { min_tag = max_tag = c; first = false; }
+                else { min_tag = min(min_tag, c); max_tag = max(max_tag, c); }
+            }
+        }
+
+        riscv_emit::emit_add_immediate(out, TempRegister{2}, ZeroRegister{}, min_tag);
+        riscv_emit::emit_subtract(out, TempRegister{3}, TempRegister{1}, TempRegister{2}); 
+        riscv_emit::emit_branch_less_than_zero(out, TempRegister{3}, next_lbl);
+
+        riscv_emit::emit_add_immediate(out, TempRegister{2}, ZeroRegister{}, max_tag);
+        riscv_emit::emit_subtract(out, TempRegister{3}, TempRegister{1}, TempRegister{2});
+        riscv_emit::emit_branch_greater_than_zero(out, TempRegister{3}, next_lbl);
+
+        riscv_emit::emit_jump(out, br_lbl);
+        riscv_emit::emit_label(out, next_lbl);
+    }
+
+    riscv_emit::emit_jump(out, no_match_lbl);
+
+    for (const auto* cs : cases) {
+        int T = cs->get_type();
+        std::string br_lbl = "case_branch_" + std::to_string(id) + "_" + std::to_string(T);
+        riscv_emit::emit_label(out, br_lbl);
+
+        begin_scope();
+
+        int fp_offset = -frame_depth_bytes_;
+        riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+        push_register(out, ArgumentRegister{0});
+        bind_var(cs->get_name(), fp_offset);
+
+        generate(out, cs->get_expr());
+
+        pop_words(out, 1);
+        end_scope();
+
+        riscv_emit::emit_jump(out, end_lbl);
+    }
+
+    riscv_emit::emit_label(out, void_lbl);
+    riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
+    riscv_emit::emit_jump(out, end_lbl);
+
+    riscv_emit::emit_label(out, no_match_lbl);
+    riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
+
+    riscv_emit::emit_label(out, end_lbl);
 }

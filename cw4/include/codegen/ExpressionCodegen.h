@@ -27,6 +27,7 @@
 #include "semantics/typed-ast/BooleanNegation.h"
 #include "semantics/typed-ast/Arithmetic.h"
 #include "semantics/typed-ast/ParenthesizedExpr.h"
+#include "semantics/typed-ast/CaseOfEsac.h"
 
 
 using namespace std;
@@ -57,6 +58,7 @@ class ExpressionCodegen {
     void emit_boolean_negation(ostream &out, const BooleanNegation* boolean_negation);
     void emit_arithmetic(ostream &out, const Arithmetic* arithmetic);
     void emit_parenthesized_expr(ostream &out, const ParenthesizedExpr* parenthesized_expr);
+    void emit_case_of_esac(ostream &out, const CaseOfEsac* case_of_esac);
     
   public:
 
