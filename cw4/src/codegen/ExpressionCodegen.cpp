@@ -69,6 +69,10 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_while_loop_pool(out, while_loop_pool);
     }
 
+    if (auto integer_negation = dynamic_cast<const IntegerNegation *>(expr)) {
+        return emit_integer_negation(out, integer_negation);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -566,4 +570,24 @@ void ExpressionCodegen::emit_while_loop_pool(ostream& out, const WhileLoopPool* 
     riscv_emit::emit_label(out, end_lbl);
 
     riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
+}
+
+void ExpressionCodegen::emit_integer_negation(
+    std::ostream& out,
+    const IntegerNegation* integer_negation
+) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Integer Negation");
+
+    generate(out, integer_negation->get_argument());
+
+    riscv_emit::emit_load_word(out, TempRegister{3}, MemoryLocation{12, ArgumentRegister{0}});
+    riscv_emit::emit_subtract(out, TempRegister{3}, ZeroRegister{}, TempRegister{3});
+
+    riscv_emit::emit_load_address(out, ArgumentRegister{0}, "Int_protObj");
+    push_register(out, FramePointer{});
+    riscv_emit::emit_call(out, "Object.copy");
+    pop_register(1);
+
+    riscv_emit::emit_store_word(out, TempRegister{3}, MemoryLocation{12, ArgumentRegister{0}});
 }

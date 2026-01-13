@@ -23,6 +23,7 @@
 #include "semantics/typed-ast/IntegerComparison.h"
 #include "semantics/typed-ast/EqualityComparison.h"
 #include "semantics/typed-ast/WhileLoopPool.h"
+#include "semantics/typed-ast/IntegerNegation.h"
 
 
 using namespace std;
@@ -49,6 +50,7 @@ class ExpressionCodegen {
     void emit_integer_comparison(ostream &out, const IntegerComparison* integer_comparison);
     void emit_equality_comparison(ostream &out, const EqualityComparison* equality_comparison);
     void emit_while_loop_pool(ostream &out, const WhileLoopPool* while_loop_pool);
+    void emit_integer_negation(ostream &out, const IntegerNegation* integer_negation);
     
   public:
 
