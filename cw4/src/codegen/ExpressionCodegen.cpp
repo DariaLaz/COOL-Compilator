@@ -73,6 +73,10 @@ void ExpressionCodegen::generate(ostream &out, const Expr* expr) {
         return emit_integer_negation(out, integer_negation);
     }
 
+    if (auto boolean_negation = dynamic_cast<const BooleanNegation *>(expr)) {
+        return emit_boolean_negation(out, boolean_negation);
+    }
+
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
@@ -585,6 +589,26 @@ void ExpressionCodegen::emit_integer_negation(
     riscv_emit::emit_subtract(out, TempRegister{3}, ZeroRegister{}, TempRegister{3});
 
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, "Int_protObj");
+    push_register(out, FramePointer{});
+    riscv_emit::emit_call(out, "Object.copy");
+    pop_register(1);
+
+    riscv_emit::emit_store_word(out, TempRegister{3}, MemoryLocation{12, ArgumentRegister{0}});
+}
+
+void ExpressionCodegen::emit_boolean_negation(
+    std::ostream& out,
+    const BooleanNegation* boolean_negation
+) {
+    riscv_emit::emit_empty_line(out);
+    riscv_emit::emit_comment(out, "Boolean Negation");
+
+    generate(out, boolean_negation->get_argument());
+
+    riscv_emit::emit_load_word(out, TempRegister{3}, MemoryLocation{12, ArgumentRegister{0}});
+    riscv_emit::emit_xor_immediate(out, TempRegister{3}, TempRegister{3}, 1);
+
+    riscv_emit::emit_load_address(out, ArgumentRegister{0}, "Bool_protObj");
     push_register(out, FramePointer{});
     riscv_emit::emit_call(out, "Object.copy");
     pop_register(1);
