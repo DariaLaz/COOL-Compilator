@@ -105,7 +105,7 @@ void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch*
 
     generate(out, expr->get_target());
 
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0});
+    riscv_emit::emit_move(out, TempRegister{6}, ArgumentRegister{0});
 
     push_register(out, FramePointer{});
 
@@ -115,7 +115,7 @@ void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch*
         push_register(out, ArgumentRegister{0});
     }
 
-    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0});
+    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{6});
 
     string class_name(class_table_->get_name(expr->get_static_dispatch_type()));
     string method_name = expr->get_method_name();
@@ -213,24 +213,26 @@ void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatc
     riscv_emit::emit_comment(out, "Dynamic Dispatch");
 
     generate(out, expr->get_target());
-    riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // t0 = receiver
+    push_register(out, ArgumentRegister{0});
 
     push_register(out, FramePointer{});
 
     const auto& args = expr->get_arguments();
-    for (int i = (int)args.size() - 1; i >= 0; --i) {
+    int argc = args.size();
+    for (int i = argc - 1; i >= 0; --i) {
         generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
     }
 
-    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0}); // a0 = receiver
+    riscv_emit::emit_load_word(out, ArgumentRegister{0}, MemoryLocation{4 * (argc + 2), StackPointer{}});
 
     int method_index = class_table_->get_method_index(expr->get_target()->get_type(), expr->get_method_name());
-    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}}); // dispTab
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}});
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{4 * method_index, TempRegister{1}});
     riscv_emit::emit_jump_and_link_register(out, TempRegister{1});
 
-    pop_register(1 + (int)args.size());
+    pop_register(1 + argc);
+    pop_words(out, 1);
 }
 
 void ExpressionCodegen::emit_object_reference(ostream& out, const ObjectReference* object_reference) {
