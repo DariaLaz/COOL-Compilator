@@ -312,21 +312,19 @@ void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocat
     const auto& args = mi->get_arguments();
     const int argc = args.size();
 
-    riscv_emit::emit_move(out, TempRegister{0}, SavedRegister{1}); // t0 = self
-
-
     push_register(out, FramePointer{});
-
 
     for (int i = argc - 1; i >= 0; --i) {
         generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
     }
 
-    riscv_emit::emit_move(out, ArgumentRegister{0}, TempRegister{0}); // a0 = self
+    riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
 
-    int method_index = class_table_->get_method_index(current_class_index_, mi->get_method_name());
-    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}}); // dispTab
+    int method_index =
+        class_table_->get_method_index(current_class_index_, mi->get_method_name());
+
+    riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{8, ArgumentRegister{0}});
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{4 * method_index, TempRegister{1}});
     riscv_emit::emit_jump_and_link_register(out, TempRegister{1});
 
