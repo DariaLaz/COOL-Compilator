@@ -718,6 +718,7 @@ void ExpressionCodegen::emit_case_of_esac(std::ostream& out, const CaseOfEsac* e
         riscv_emit::emit_label(out, next_lbl);
     }
 
+    // no match -> abort
     riscv_emit::emit_jump(out, no_match_lbl);
 
     for (const auto* cs : cases) {
@@ -740,12 +741,42 @@ void ExpressionCodegen::emit_case_of_esac(std::ostream& out, const CaseOfEsac* e
         riscv_emit::emit_jump(out, end_lbl);
     }
 
+    // void
     riscv_emit::emit_label(out, void_lbl);
-    riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
+
+    riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1}); 
+    push_register(out, FramePointer{});
+
+    riscv_emit::emit_load_address(out, TempRegister{2}, get_file_name_label());
+    push_register(out, TempRegister{2});
+
+    riscv_emit::emit_load_address(out, TempRegister{2}, static_constants_ ->use_int_constant(e->get_line()));
+    push_register(out, TempRegister{2});
+
+    riscv_emit::emit_call(out, "_case_abort_on_void");
+
     riscv_emit::emit_jump(out, end_lbl);
 
+    // no match
     riscv_emit::emit_label(out, no_match_lbl);
-    riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
+    riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
 
+    push_register(out, FramePointer{});
+
+    riscv_emit::emit_load_address(out, TempRegister{2}, get_file_name_label());
+    push_register(out, TempRegister{2});
+
+    riscv_emit::emit_load_address(out, TempRegister{2}, static_constants_ ->use_int_constant(e->get_line()));
+    push_register(out, TempRegister{2});
+
+    riscv_emit::emit_load_address(out, TempRegister{2}, "class_nameTab");             
+    riscv_emit::emit_shift_left_immediate(out, TempRegister{3}, TempRegister{1}, 2); 
+    riscv_emit::emit_add(out, TempRegister{2}, TempRegister{2}, TempRegister{3});    
+    riscv_emit::emit_load_word(out, TempRegister{2}, MemoryLocation{0, TempRegister{2}}); 
+    push_register(out, TempRegister{2});
+    riscv_emit::emit_call(out, "_case_abort_no_match");
+    riscv_emit::emit_jump(out, end_lbl);
+
+    // end
     riscv_emit::emit_label(out, end_lbl);
 }
