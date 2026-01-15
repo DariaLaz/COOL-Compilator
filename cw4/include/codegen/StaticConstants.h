@@ -1,15 +1,20 @@
 #ifndef CODEGEN_COOL_STATIC_CONSTANTS_H_
 #define CODEGEN_COOL_STATIC_CONSTANTS_H_
 
+#include "semantics/ClassTable.h"
+
 #include <memory>
 #include <ostream>
 #include <string>
 #include <unordered_map>
 
+
 using namespace std;
 
 class StaticConstants {
   private:
+    ClassTable* class_table_;
+
     int next_string_id = 0;
     unordered_map<string, string> string_to_label;
     
@@ -21,6 +26,10 @@ class StaticConstants {
     static string strip_quotes_if_any(const string& s);
     static string escape_for_gas_string(const string& s);
   public:
+    void set_class_table(ClassTable* class_table) {
+      class_table_ = class_table;
+    }
+
     string use_string_constant(const string& str);
     string use_bool_constant(bool value);
     string use_int_constant(int value);

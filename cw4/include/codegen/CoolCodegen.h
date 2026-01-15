@@ -30,7 +30,7 @@ class CoolCodegen {
     void emit_className(std::ostream &out, const std::string &class_name);
     
     void emit_prototype_tables(std::ostream &out, vector<std::string>& class_names);
-    void emit_prototype_table(std::ostream &out, const std::string& class_name, size_t index);
+    void emit_prototype_table(std::ostream &out, const std::string& class_name);
 
     void emit_dispatch_tables(std::ostream &out, vector<std::string>& class_names, vector<std::string>& base_class_names);
     void emit_dispatch_table(std::ostream &out, const std::string& class_name, vector<std::string>& base_class_names);
@@ -45,7 +45,9 @@ class CoolCodegen {
           static_constants_(),
           expression_codegen_(&static_constants_)
           {
-              expression_codegen_.setClassTable(class_table_.get());
+              expression_codegen_.set_class_table(class_table_.get());
+              expression_codegen_.set_file_name(file_name_);
+              static_constants_.set_class_table(class_table_.get());
           }
 
     void generate(std::ostream &out);

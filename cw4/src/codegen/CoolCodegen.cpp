@@ -7,7 +7,10 @@ using namespace std;
 
 
 
-void CoolCodegen::generate(ostream &out) {
+void CoolCodegen::generate(std::ostream &out) {
+    class_table_->normalize_indexes();
+    class_table_->compute_sub_hierarchy_sizes();
+
     emit_methods(out);
 
     emit_tables(out);
@@ -111,25 +114,14 @@ void CoolCodegen::emit_tables(ostream &out) {
     riscv_emit::emit_empty_line(out);
 
     vector<string> class_names = class_table_->get_class_names();
-    vector<string> base_class_names = {"Object", "IO", "Int", "Bool", "String"};
-    vector<string> other_class_names;
 
-    for (const auto &name : class_names) {
-        if (find(base_class_names.begin(), base_class_names.end(), name) == base_class_names.end()) {
-            other_class_names.push_back(name);
-        }
-    }
+    vector<string> base = {"Object", "IO", "Int", "Bool", "String"};
 
-    vector<string> all_class_names;
-    all_class_names.insert(all_class_names.end(), base_class_names.begin(), base_class_names.end());
-    all_class_names.insert(all_class_names.end(), other_class_names.begin(), other_class_names.end());
-
-
-    emit_name_table(out, all_class_names);
-    emit_prototype_tables(out, all_class_names);
-    emit_dispatch_tables(out, all_class_names, base_class_names);
-    emit_initialization_methods(out, all_class_names);
-    emit_class_object_table(out, all_class_names);
+    emit_name_table(out, class_names);
+    emit_prototype_tables(out, class_names);
+    emit_dispatch_tables(out, class_names, base);
+    emit_initialization_methods(out, class_names);
+    emit_class_object_table(out, class_names);
 }
 
 void CoolCodegen::emit_name_table(ostream &out, vector<string>& class_names) {
@@ -188,12 +180,12 @@ void CoolCodegen::emit_prototype_tables(ostream &out, vector<string>& class_name
     riscv_emit::emit_header_comment(out, "Prototype Object Table");
     riscv_emit::emit_p2align(out, 2);
     
-    for (size_t i = 0; i < class_names.size(); ++i) {
-        emit_prototype_table(out, class_names[i], i);
+    for (const auto& name : class_names) {
+        emit_prototype_table(out, name);
     }
 }
 
-void CoolCodegen::emit_prototype_table(ostream &out, const string &class_name, size_t index) {
+void CoolCodegen::emit_prototype_table(ostream &out, const string &class_name) {
     riscv_emit::emit_gc_tag(out);
     riscv_emit::emit_directive(out, "globl");
     out << " " << class_name << "_protObj" << endl;

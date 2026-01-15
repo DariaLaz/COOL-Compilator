@@ -37,6 +37,7 @@ class ExpressionCodegen {
     StaticConstants* static_constants_;
     ClassTable* class_table_;
     int current_class_index_ = 0;
+    string file_name_;
 
     void emit_static_dispatch(ostream &out, const StaticDispatch* static_dispatch);
     void emit_string_constant(std::ostream& out, const StringConstant* string_constant);
@@ -59,7 +60,10 @@ class ExpressionCodegen {
     void emit_arithmetic(ostream &out, const Arithmetic* arithmetic);
     void emit_parenthesized_expr(ostream &out, const ParenthesizedExpr* parenthesized_expr);
     void emit_case_of_esac(ostream &out, const CaseOfEsac* case_of_esac);
-    
+   
+    string get_file_name_label(){
+        return static_constants_->use_string_constant(file_name_);
+    }
   public:
 
   void set_current_class(int class_index) {
@@ -70,8 +74,11 @@ class ExpressionCodegen {
   ExpressionCodegen(StaticConstants* static_constants)
         : static_constants_(static_constants)
         {}
-  void setClassTable(ClassTable* class_table) {
+  void set_class_table(ClassTable* class_table) {
       class_table_ = class_table;
+  }
+  void set_file_name(const string& file_name) {
+      file_name_ = file_name;
   }
 
   void generate(ostream &out, const Expr* expr);
