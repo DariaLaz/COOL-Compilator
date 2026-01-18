@@ -506,124 +506,132 @@ void ExpressionCodegen::emit_equality_comparison(
     generate(out, equality_comparison->get_rhs());
     riscv_emit::emit_move(out, TempRegister{1}, ArgumentRegister{0}); // t1 = rhs
 
-    // load lhs from stack, then pop it
+    // t0 = lhs (stored at 4(sp) because push did sw 0(sp); addi sp, sp, -4)
     riscv_emit::emit_load_word(out, TempRegister{0}, MemoryLocation{4, StackPointer{}}); // t0 = lhs
     pop_words(out, 1); // sp += 4
 
-    int id = riscv_emit::if_then_else_fi_label_count++;
-    std::string ret_true   = "eq_true_"  + std::to_string(id);
-    std::string ret_false  = "eq_false_" + std::to_string(id);
-    std::string end_lbl    = "eq_end_"   + std::to_string(id);
+    const int id = riscv_emit::if_then_else_fi_label_count++;
 
-    std::string lhs_void   = "eq_lhs_void_" + std::to_string(id);
-    std::string after_void = "eq_after_void_" + std::to_string(id);
+    const std::string ret_true     = "eq_true_" + std::to_string(id);
+    const std::string ret_false    = "eq_false_" + std::to_string(id);
+    const std::string end_lbl      = "eq_end_" + std::to_string(id);
 
-    std::string check_int    = "eq_check_int_"    + std::to_string(id);
-    std::string check_bool   = "eq_check_bool_"   + std::to_string(id);
-    std::string check_string = "eq_check_string_" + std::to_string(id);
+    const std::string lhs_void_lbl = "eq_lhs_void_" + std::to_string(id);
+    const std::string after_void   = "eq_after_void_" + std::to_string(id);
 
-    // pointer equality => true
-    out << "    sub t4, t0, t1\n";
-    out << "    seqz t4, t4\n";
-    out << "    bnez t4, " << ret_true << "\n";
+    const std::string check_int    = "eq_check_int_" + std::to_string(id);
+    const std::string check_bool   = "eq_check_bool_" + std::to_string(id);
+    const std::string check_string = "eq_check_string_" + std::to_string(id);
 
-    // void handling
-    out << "    beqz t0, " << lhs_void << "\n";
-    out << "    beqz t1, " << ret_false << "\n";
-    out << "    j " << after_void << "\n";
+    const std::string str_loop     = "eq_str_loop_" + std::to_string(id);
+    const std::string str_ok       = "eq_str_ok_" + std::to_string(id);
 
-    out << lhs_void << ":\n";
-    out << "    beqz t1, " << ret_true << "\n";
-    out << "    j " << ret_false << "\n";
+    // 1) pointer equality
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{0}, TempRegister{1}); // t4 = t0 - t1
+    riscv_emit::emit_set_equal_zero(out, TempRegister{4}, TempRegister{4});            // t4 = (t4==0)
+    riscv_emit::emit_branch_not_equal_zero(out, TempRegister{4}, ret_true);
 
-    out << after_void << ":\n";
+    // 2) void handling
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{0}, lhs_void_lbl);
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{1}, ret_false);
+    riscv_emit::emit_jump(out, after_void);
 
-    // require same dynamic type (tag)
-    out << "    lw t2, 0(t0)\n"; // t2 = tag(lhs)
-    out << "    lw t3, 0(t1)\n"; // t3 = tag(rhs)
-    out << "    sub t4, t2, t3\n";
-    out << "    bnez t4, " << ret_false << "\n";
+    riscv_emit::emit_label(out, lhs_void_lbl);
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{1}, ret_true);
+    riscv_emit::emit_jump(out, ret_false);
 
-    // check by tag
-    int int_tag    = class_table_->get_index("Int");
-    int bool_tag   = class_table_->get_index("Bool");
-    int string_tag = class_table_->get_index("String");
+    riscv_emit::emit_label(out, after_void);
 
-    out << "    li t4, " << int_tag << "\n";
-    out << "    sub t4, t2, t4\n";
-    out << "    beqz t4, " << check_int << "\n";
+    // 3) same dynamic type(tag)
+    riscv_emit::emit_load_word(out, TempRegister{2}, MemoryLocation{0, TempRegister{0}}); // t2 = tag(lhs)
+    riscv_emit::emit_load_word(out, TempRegister{3}, MemoryLocation{0, TempRegister{1}}); // t3 = tag(rhs)
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{2}, TempRegister{3});
+    riscv_emit::emit_branch_not_equal_zero(out, TempRegister{4}, ret_false);
 
-    out << "    li t4, " << bool_tag << "\n";
-    out << "    sub t4, t2, t4\n";
-    out << "    beqz t4, " << check_bool << "\n";
+    // Your runtime tags (from .data): Object=0, IO=1, Int=2, Bool=3, String=4, ...
+    const int int_tag    = class_table_->get_index("Int");
+    const int bool_tag   = class_table_->get_index("Bool");
+    const int string_tag = class_table_->get_index("String");
 
-    out << "    li t4, " << string_tag << "\n";
-    out << "    sub t4, t2, t4\n";
-    out << "    beqz t4, " << check_string << "\n";
+    // check Int
+    riscv_emit::emit_add_immediate(out, TempRegister{4}, ZeroRegister{}, int_tag);
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{2}, TempRegister{4});
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{4}, check_int);
+
+    // check Bool
+    riscv_emit::emit_add_immediate(out, TempRegister{4}, ZeroRegister{}, bool_tag);
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{2}, TempRegister{4});
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{4}, check_bool);
+
+    // check String
+    riscv_emit::emit_add_immediate(out, TempRegister{4}, ZeroRegister{}, string_tag);
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{2}, TempRegister{4});
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{4}, check_string);
 
     // other objects: only pointer-eq counts (already checked) => false
-    out << "    j " << ret_false << "\n";
+    riscv_emit::emit_jump(out, ret_false);
 
-    // ---- Int compare ----
-    out << check_int << ":\n";
-    out << "    lw t5, 12(t0)\n";
-    out << "    lw t6, 12(t1)\n";
-    out << "    sub t4, t5, t6\n";
-    out << "    beqz t4, " << ret_true << "\n";
-    out << "    j " << ret_false << "\n";
+    // ---- Int compare (value at +12) ----
+    riscv_emit::emit_label(out, check_int);
+    riscv_emit::emit_load_word(out, TempRegister{5}, MemoryLocation{12, TempRegister{0}});
+    riscv_emit::emit_load_word(out, TempRegister{6}, MemoryLocation{12, TempRegister{1}});
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{5}, TempRegister{6});
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{4}, ret_true);
+    riscv_emit::emit_jump(out, ret_false);
 
-    // ---- Bool compare ----
-    out << check_bool << ":\n";
-    out << "    lw t5, 12(t0)\n";
-    out << "    lw t6, 12(t1)\n";
-    out << "    sub t4, t5, t6\n";
-    out << "    beqz t4, " << ret_true << "\n";
-    out << "    j " << ret_false << "\n";
+    // ---- Bool compare (value at +12) ----
+    riscv_emit::emit_label(out, check_bool);
+    riscv_emit::emit_load_word(out, TempRegister{5}, MemoryLocation{12, TempRegister{0}});
+    riscv_emit::emit_load_word(out, TempRegister{6}, MemoryLocation{12, TempRegister{1}});
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{5}, TempRegister{6});
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{4}, ret_true);
+    riscv_emit::emit_jump(out, ret_false);
 
-    // ---- String compare (length + bytes) ----
-    out << check_string << ":\n";
-    // length Int objects at 12(String), their int values at 12(Int)
-    out << "    lw t5, 12(t0)\n";   // lenObjL
-    out << "    lw t6, 12(t1)\n";   // lenObjR
-    out << "    lw t5, 12(t5)\n";   // lenL
-    out << "    lw t6, 12(t6)\n";   // lenR
-    out << "    sub t4, t5, t6\n";
-    out << "    bnez t4, " << ret_false << "\n";
+    // ---- String compare ----
+    riscv_emit::emit_label(out, check_string);
 
-    // use t2 as remaining count (NO t7!)
-    out << "    add t2, t5, zero\n";  // t2 = len
+    // length is Int-object pointer at +12(String), int value at +12(Int)
+    riscv_emit::emit_load_word(out, TempRegister{5}, MemoryLocation{12, TempRegister{0}}); // t5 = lenObjL
+    riscv_emit::emit_load_word(out, TempRegister{6}, MemoryLocation{12, TempRegister{1}}); // t6 = lenObjR
+    riscv_emit::emit_load_word(out, TempRegister{5}, MemoryLocation{12, TempRegister{5}}); // t5 = lenL
+    riscv_emit::emit_load_word(out, TempRegister{6}, MemoryLocation{12, TempRegister{6}}); // t6 = lenR
+    riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{5}, TempRegister{6});
+    riscv_emit::emit_branch_not_equal_zero(out, TempRegister{4}, ret_false);
 
-    // ptrs to first char (String header is 4 words => +16)
-    out << "    addi t5, t0, 16\n";   // pL
-    out << "    addi t6, t1, 16\n";   // pR
+    // remaining = len
+    riscv_emit::emit_move(out, TempRegister{2}, TempRegister{5}); // t2 = remaining
 
-    std::string loop_lbl = "eq_str_loop_" + std::to_string(id);
-    std::string ok_lbl   = "eq_str_ok_"   + std::to_string(id);
+    // IMPORTANT for your runtime (.data proves it):
+    // chars are INLINE starting at obj+16  (NOT a pointer!)
+    riscv_emit::emit_add_immediate(out, TempRegister{5}, TempRegister{0}, 16); // t5 = pL = t0+16
+    riscv_emit::emit_add_immediate(out, TempRegister{6}, TempRegister{1}, 16); // t6 = pR = t1+16
 
-    out << loop_lbl << ":\n";
-    out << "    beqz t2, " << ok_lbl << "\n";
+    riscv_emit::emit_label(out, str_loop);
+    riscv_emit::emit_branch_equal_zero(out, TempRegister{2}, str_ok);
+
     out << "    lb t3, 0(t5)\n";
     out << "    lb t4, 0(t6)\n";
     out << "    bne t3, t4, " << ret_false << "\n";
-    out << "    addi t5, t5, 1\n";
-    out << "    addi t6, t6, 1\n";
-    out << "    addi t2, t2, -1\n";
-    out << "    j " << loop_lbl << "\n";
 
-    out << ok_lbl << ":\n";
-    out << "    j " << ret_true << "\n";
+    riscv_emit::emit_add_immediate(out, TempRegister{5}, TempRegister{5}, 1);
+    riscv_emit::emit_add_immediate(out, TempRegister{6}, TempRegister{6}, 1);
+    riscv_emit::emit_add_immediate(out, TempRegister{2}, TempRegister{2}, -1);
+    riscv_emit::emit_jump(out, str_loop);
+
+    riscv_emit::emit_label(out, str_ok);
+    riscv_emit::emit_jump(out, ret_true);
 
     // ---- return blocks ----
-    out << ret_true << ":\n";
+    riscv_emit::emit_label(out, ret_true);
     riscv_emit::emit_load_address(out, ArgumentRegister{0},
                                   static_constants_->use_bool_constant(true));
     riscv_emit::emit_jump(out, end_lbl);
 
-    out << ret_false << ":\n";
+    riscv_emit::emit_label(out, ret_false);
     riscv_emit::emit_load_address(out, ArgumentRegister{0},
                                   static_constants_->use_bool_constant(false));
 
-    out << end_lbl << ":\n";
+    riscv_emit::emit_label(out, end_lbl);
 }
 
 void ExpressionCodegen::emit_while_loop_pool(ostream& out, const WhileLoopPool* w) {
