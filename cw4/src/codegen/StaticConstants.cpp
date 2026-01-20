@@ -5,7 +5,6 @@
 
 using namespace std;
 
-
 string StaticConstants::use_string_constant(const string& str) {
     if (string_to_label.find(str) == string_to_label.end()) {
         string label = "str_const_" + to_string(next_string_id++);
@@ -36,17 +35,17 @@ void StaticConstants::emit_all(ostream& out) {
     const int string_index = class_table_->get_index("String");
 
     for (const auto& [raw, label] : string_to_label) {
-        std::string inner   = strip_quotes_if_any(raw);
-        std::string content = unescape_string_literal(inner);
+        string inner   = strip_quotes_if_any(raw);
+        string content = unescape_string_literal(inner);
 
         const size_t str_len = content.size();
 
         riscv_emit::emit_gc_tag(out);
         riscv_emit::emit_label(out, label + ".length");
-        riscv_emit::emit_word(out, int_index);
-        riscv_emit::emit_word(out, 4);
-        riscv_emit::emit_word(out, 0);
-        riscv_emit::emit_word(out, (str_len));
+        riscv_emit::emit_word(out, int_index);  // tag
+        riscv_emit::emit_word(out, 4);          // size in words
+        riscv_emit::emit_word(out, 0);          // dispatch
+        riscv_emit::emit_word(out, (str_len));  // actual value
         riscv_emit::emit_empty_line(out);
 
         riscv_emit::emit_gc_tag(out);
@@ -54,7 +53,7 @@ void StaticConstants::emit_all(ostream& out) {
         riscv_emit::emit_word(out, string_index);
 
         const int str_len_with_null = static_cast<int>(str_len) + 1;
-        const int obj_size = static_cast<int>(std::ceil(str_len_with_null / 4.0)) + 4;
+        const int obj_size = static_cast<int>(ceil(str_len_with_null / 4.0)) + 4;
 
         riscv_emit::emit_word(out, obj_size);
         riscv_emit::emit_word(out, "String_dispTab");
@@ -139,13 +138,12 @@ string StaticConstants::unescape_string_literal(const string& raw) {
             case 'f': out.push_back('\f'); break;
             case '\\': out.push_back('\\'); break;
             case '"': out.push_back('"'); break;
-            default:out.push_back(n); break;
+            default: out.push_back(n); break;
         }
     }
 
     return out;
 }
-
 
 string StaticConstants::use_default_value(string class_name) {
     if (class_name == "Int") {

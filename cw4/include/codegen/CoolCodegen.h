@@ -14,43 +14,44 @@
 using namespace std;
 
 class CoolCodegen {
-  private:
+private:
     StaticConstants static_constants_;
     ExpressionCodegen expression_codegen_;
 
-    std::string file_name_;
-    std::unique_ptr<ClassTable> class_table_;
+    string file_name_;
+    unique_ptr<ClassTable> class_table_;
 
-    void emit_methods(std::ostream &out);
+    void emit_methods(ostream& out);
 
-    void emit_tables(std::ostream &out);
-    void emit_name_table(std::ostream &out,  vector<std::string>& class_names);
-    void emit_className_attributes(std::ostream &out, const std::string &class_name);
-    void emit_length_attribute(std::ostream &out, const std::string &class_name);
-    void emit_className(std::ostream &out, const std::string &class_name);
+    void emit_tables(ostream& out);
+    void emit_name_table(ostream& out, vector<string>& class_names);
+    void emit_className_attributes(ostream& out, const string& class_name);
+    void emit_length_attribute(ostream& out, const string& class_name);
+    void emit_className(ostream& out, const string& class_name);
     
-    void emit_prototype_tables(std::ostream &out, vector<std::string>& class_names);
-    void emit_prototype_table(std::ostream &out, const std::string& class_name);
+    void emit_prototype_tables(ostream& out, vector<string>& class_names);
+    void emit_prototype_table(ostream& out, const string& class_name);
 
-    void emit_dispatch_tables(std::ostream &out, vector<std::string>& class_names, vector<std::string>& base_class_names);
-    void emit_dispatch_table(std::ostream &out, const std::string& class_name, vector<std::string>& base_class_names);
+    void emit_dispatch_tables(ostream& out, vector<string>& class_names, vector<string>& base_class_names);
+    void emit_dispatch_table(ostream& out, const string& class_name, vector<string>& base_class_names);
 
-    void emit_initialization_methods(std::ostream &out, vector<std::string>& class_names);
+    void emit_initialization_methods(ostream& out, vector<string>& class_names);
 
-    void emit_class_object_table(std::ostream &out, vector<std::string>& class_names);
-  public:
-    CoolCodegen(std::string file_name, std::unique_ptr<ClassTable> class_table)
-        : file_name_(std::move(file_name)),
-          class_table_(std::move(class_table)),
+    void emit_class_object_table(ostream& out, vector<string>& class_names);
+
+public:
+    CoolCodegen(string file_name, unique_ptr<ClassTable> class_table)
+        : file_name_(move(file_name)),
+          class_table_(move(class_table)),
           static_constants_(),
           expression_codegen_(&static_constants_)
-          {
-              expression_codegen_.set_class_table(class_table_.get());
-              expression_codegen_.set_file_name(file_name_);
-              static_constants_.set_class_table(class_table_.get());
-          }
+    {
+        expression_codegen_.set_class_table(class_table_.get());
+        expression_codegen_.set_file_name(file_name_);
+        static_constants_.set_class_table(class_table_.get());
+    }
 
-    void generate(std::ostream &out);
+    void generate(ostream& out);
 };
 
 #endif

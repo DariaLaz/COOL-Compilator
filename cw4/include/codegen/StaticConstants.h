@@ -8,11 +8,10 @@
 #include <string>
 #include <unordered_map>
 
-
 using namespace std;
 
 class StaticConstants {
-  private:
+private:
     ClassTable* class_table_;
 
     int next_string_id = 0;
@@ -22,12 +21,14 @@ class StaticConstants {
     bool is_false_used = false;
     
     unordered_map<int, string> int_to_label;
+
     static string unescape_string_literal(const string& raw);
     static string strip_quotes_if_any(const string& s);
     static string escape_for_gas_string(const string& s);
-  public:
+
+public:
     void set_class_table(ClassTable* class_table) {
-      class_table_ = class_table;
+        class_table_ = class_table;
     }
 
     string use_string_constant(const string& str);
@@ -35,7 +36,7 @@ class StaticConstants {
     string use_int_constant(int value);
     string use_default_value(string class_name);
 
-    void emit_all(ostream &out);
+    void emit_all(ostream& out);
 };
 
 #endif
