@@ -5,100 +5,124 @@
 
 using namespace std;
 
-void ExpressionCodegen::generate(ostream& out, const Expr* expr) {
-    if (auto static_dispatch = dynamic_cast<const StaticDispatch*>(expr)) {
+void ExpressionCodegen::generate(ostream &out, const Expr *expr)
+{
+    if (auto static_dispatch = dynamic_cast<const StaticDispatch *>(expr))
+    {
         return emit_static_dispatch(out, static_dispatch);
-    } 
+    }
 
-    if (auto string_constant = dynamic_cast<const StringConstant*>(expr)) {
+    if (auto string_constant = dynamic_cast<const StringConstant *>(expr))
+    {
         return emit_string_constant(out, string_constant);
     }
 
-    if (auto let_in = dynamic_cast<const LetIn*>(expr)) {
+    if (auto let_in = dynamic_cast<const LetIn *>(expr))
+    {
         return emit_let_in(out, let_in);
     }
 
-    if (auto new_object = dynamic_cast<const NewObject*>(expr)) {
+    if (auto new_object = dynamic_cast<const NewObject *>(expr))
+    {
         return emit_new_object(out, new_object);
     }
 
-    if (auto dynamic_dispatch = dynamic_cast<const DynamicDispatch*>(expr)) {
+    if (auto dynamic_dispatch = dynamic_cast<const DynamicDispatch *>(expr))
+    {
         return emit_dynamic_dispatch(out, dynamic_dispatch);
     }
 
-    if (auto object_reference = dynamic_cast<const ObjectReference*>(expr)) {
+    if (auto object_reference = dynamic_cast<const ObjectReference *>(expr))
+    {
         return emit_object_reference(out, object_reference);
     }
 
-    if (auto sequence = dynamic_cast<const Sequence*>(expr)) {
+    if (auto sequence = dynamic_cast<const Sequence *>(expr))
+    {
         return emit_sequence(out, sequence);
     }
 
-    if (auto int_constant = dynamic_cast<const IntConstant*>(expr)) {
+    if (auto int_constant = dynamic_cast<const IntConstant *>(expr))
+    {
         return emit_int_constant(out, int_constant);
     }
 
-    if (auto assignment = dynamic_cast<const Assignment*>(expr)) {
+    if (auto assignment = dynamic_cast<const Assignment *>(expr))
+    {
         return emit_assignment(out, assignment);
     }
 
-    if (auto method_invocation = dynamic_cast<const MethodInvocation*>(expr)) {
+    if (auto method_invocation = dynamic_cast<const MethodInvocation *>(expr))
+    {
         return emit_method_invocation(out, method_invocation);
     }
 
-    if (auto if_then_else_fi = dynamic_cast<const IfThenElseFi*>(expr)) {
+    if (auto if_then_else_fi = dynamic_cast<const IfThenElseFi *>(expr))
+    {
         return emit_if_then_else_fi(out, if_then_else_fi);
     }
 
-    if (auto bool_constant = dynamic_cast<const BoolConstant*>(expr)) {
+    if (auto bool_constant = dynamic_cast<const BoolConstant *>(expr))
+    {
         return emit_bool_constant(out, bool_constant);
     }
 
-    if (auto is_void = dynamic_cast<const IsVoid*>(expr)) {
+    if (auto is_void = dynamic_cast<const IsVoid *>(expr))
+    {
         return emit_is_void(out, is_void);
     }
 
-    if (auto integer_comparison = dynamic_cast<const IntegerComparison *>(expr)) {
+    if (auto integer_comparison = dynamic_cast<const IntegerComparison *>(expr))
+    {
         return emit_integer_comparison(out, integer_comparison);
     }
 
-    if (auto equality_comparison = dynamic_cast<const EqualityComparison*>(expr)) {
+    if (auto equality_comparison = dynamic_cast<const EqualityComparison *>(expr))
+    {
         return emit_equality_comparison(out, equality_comparison);
     }
 
-    if (auto while_loop_pool = dynamic_cast<const WhileLoopPool*>(expr)) {
+    if (auto while_loop_pool = dynamic_cast<const WhileLoopPool *>(expr))
+    {
         return emit_while_loop_pool(out, while_loop_pool);
     }
 
-    if (auto integer_negation = dynamic_cast<const IntegerNegation*>(expr)) {
+    if (auto integer_negation = dynamic_cast<const IntegerNegation *>(expr))
+    {
         return emit_integer_negation(out, integer_negation);
     }
 
-    if (auto boolean_negation = dynamic_cast<const BooleanNegation*>(expr)) {
+    if (auto boolean_negation = dynamic_cast<const BooleanNegation *>(expr))
+    {
         return emit_boolean_negation(out, boolean_negation);
     }
 
-    if (auto arithmetic = dynamic_cast<const Arithmetic*>(expr)) {
+    if (auto arithmetic = dynamic_cast<const Arithmetic *>(expr))
+    {
         return emit_arithmetic(out, arithmetic);
     }
 
-    if (auto parenthesized_expr = dynamic_cast<const ParenthesizedExpr*>(expr)) {
+    if (auto parenthesized_expr = dynamic_cast<const ParenthesizedExpr *>(expr))
+    {
         return emit_parenthesized_expr(out, parenthesized_expr);
     }
 
-    if (auto case_of_esac = dynamic_cast<const CaseOfEsac*>(expr)) {
+    if (auto case_of_esac = dynamic_cast<const CaseOfEsac *>(expr))
+    {
         return emit_case_of_esac(out, case_of_esac);
     }
 
     riscv_emit::emit_comment(out, "TODO: unsupported expr");
 }
 
-void ExpressionCodegen::emit_string_constant(ostream& out, const StringConstant* string_constant) {
+void ExpressionCodegen::emit_string_constant(ostream &out, const StringConstant *string_constant)
+{
     string label = static_constants_->use_string_constant(string_constant->get_value());
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
 }
 
-void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch* expr) {
+void ExpressionCodegen::emit_static_dispatch(ostream &out, const StaticDispatch *expr)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Static Dispatch");
 
@@ -108,8 +132,9 @@ void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch*
 
     push_register(out, FramePointer{});
 
-    const auto& args = expr->get_arguments();
-    for (int i = (int)args.size() - 1; i >= 0; --i) {
+    const auto &args = expr->get_arguments();
+    for (int i = (int)args.size() - 1; i >= 0; --i)
+    {
         generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
     }
@@ -122,7 +147,8 @@ void ExpressionCodegen::emit_static_dispatch(ostream& out, const StaticDispatch*
     riscv_emit::emit_jump_and_link(out, class_name + "." + method_name);
 }
 
-void ExpressionCodegen::emit_let_in(ostream& out, const LetIn* let_in) {
+void ExpressionCodegen::emit_let_in(ostream &out, const LetIn *let_in)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Let In");
 
@@ -131,16 +157,23 @@ void ExpressionCodegen::emit_let_in(ostream& out, const LetIn* let_in) {
 
     begin_scope();
 
-    for (const auto& vardecl : let_in->get_vardecls()) {
-        if (vardecl->has_initializer()) {
+    for (const auto &vardecl : let_in->get_vardecls())
+    {
+        if (vardecl->has_initializer())
+        {
             generate(out, vardecl->get_initializer());
-        } else {
+        }
+        else
+        {
             string class_name(class_table_->get_name(vardecl->get_type()));
             string label = static_constants_->use_default_value(class_name);
 
-            if (!label.empty()) {
+            if (!label.empty())
+            {
                 riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
-            } else {        
+            }
+            else
+            {
                 riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{}); // null
             }
         }
@@ -159,7 +192,8 @@ void ExpressionCodegen::emit_let_in(ostream& out, const LetIn* let_in) {
     end_scope();
 }
 
-void ExpressionCodegen::emit_new_object(ostream& out, const NewObject* new_object) {
+void ExpressionCodegen::emit_new_object(ostream &out, const NewObject *new_object)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "New Object");
     string class_name(class_table_->get_name(new_object->get_type()));
@@ -176,37 +210,45 @@ void ExpressionCodegen::emit_new_object(ostream& out, const NewObject* new_objec
 }
 
 // Utils
-void ExpressionCodegen::push_register(ostream& out, Register reg) {
+void ExpressionCodegen::push_register(ostream &out, Register reg)
+{
     riscv_emit::emit_store_word(out, reg, MemoryLocation{0, StackPointer{}});
     riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, -4);
     frame_depth_bytes_ += 4;
 }
 
-void ExpressionCodegen::pop_register(int words_count) {
+void ExpressionCodegen::pop_register(int words_count)
+{
     frame_depth_bytes_ -= 4 * words_count;
 }
 
-void ExpressionCodegen::pop_words(ostream& out, int words_count) {
+void ExpressionCodegen::pop_words(ostream &out, int words_count)
+{
     riscv_emit::emit_add_immediate(out, StackPointer{}, StackPointer{}, 4 * words_count);
     frame_depth_bytes_ -= 4 * words_count;
 }
 
-void ExpressionCodegen::bind_var(const string& name, int fp_offset) {
+void ExpressionCodegen::bind_var(const string &name, int fp_offset)
+{
     scopes_.back()[name] = fp_offset;
 }
 
 void ExpressionCodegen::begin_scope() { scopes_.push_back({}); }
 void ExpressionCodegen::end_scope() { scopes_.pop_back(); }
 
-int ExpressionCodegen::lookup_var(const string& name) {
-    for (int i = (int)scopes_.size() - 1; i >= 0; --i) {
+int ExpressionCodegen::lookup_var(const string &name)
+{
+    for (int i = (int)scopes_.size() - 1; i >= 0; --i)
+    {
         auto it = scopes_[i].find(name);
-        if (it != scopes_[i].end()) return it->second;
+        if (it != scopes_[i].end())
+            return it->second;
     }
     return -1;
 }
 
-void ExpressionCodegen::reset_frame() {
+void ExpressionCodegen::reset_frame()
+{
     frame_depth_bytes_ = 8;
     scopes_.clear();
     begin_scope();
@@ -214,7 +256,8 @@ void ExpressionCodegen::reset_frame() {
 
 // end Utils
 
-void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatch* expr) {
+void ExpressionCodegen::emit_dynamic_dispatch(ostream &out, const DynamicDispatch *expr)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Dynamic Dispatch");
 
@@ -223,9 +266,10 @@ void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatc
 
     push_register(out, FramePointer{});
 
-    const auto& args = expr->get_arguments();
+    const auto &args = expr->get_arguments();
     int argc = args.size();
-    for (int i = argc - 1; i >= 0; --i) {
+    for (int i = argc - 1; i >= 0; --i)
+    {
         generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
     }
@@ -241,17 +285,20 @@ void ExpressionCodegen::emit_dynamic_dispatch(ostream& out, const DynamicDispatc
     pop_words(out, 1);
 }
 
-void ExpressionCodegen::emit_object_reference(ostream& out, const ObjectReference* object_reference) {
+void ExpressionCodegen::emit_object_reference(ostream &out, const ObjectReference *object_reference)
+{
     string name = object_reference->get_name();
 
-    if (name == "self") {
+    if (name == "self")
+    {
         riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
         return;
     }
 
     int fp_offset = lookup_var(name);
 
-    if (fp_offset != -1) {
+    if (fp_offset != -1)
+    {
         riscv_emit::emit_load_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
         return;
     }
@@ -259,52 +306,69 @@ void ExpressionCodegen::emit_object_reference(ostream& out, const ObjectReferenc
     auto all_attrs = class_table_->get_all_attributes(current_class_index_);
 
     int attr_i = -1;
-    for (int i = 0; i < (int)all_attrs.size(); ++i) {
-        if (all_attrs[i] == name) { attr_i = i; break; }
+    for (int i = 0; i < (int)all_attrs.size(); ++i)
+    {
+        if (all_attrs[i] == name)
+        {
+            attr_i = i;
+            break;
+        }
     }
 
-    if (attr_i < 0) {
+    if (attr_i < 0)
+    {
         riscv_emit::emit_comment(out, "ICE: unknown identifier");
         riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
         return;
     }
 
-    int byte_offset = (3 + attr_i) * 4; 
+    int byte_offset = (3 + attr_i) * 4;
     riscv_emit::emit_load_word(out, ArgumentRegister{0}, MemoryLocation{byte_offset, SavedRegister{1}});
 }
 
-void ExpressionCodegen::emit_sequence(ostream& out, const Sequence* sequence) {
+void ExpressionCodegen::emit_sequence(ostream &out, const Sequence *sequence)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Sequence");
-    for (const auto& expr : sequence->get_sequence()) {
+    for (const auto &expr : sequence->get_sequence())
+    {
         generate(out, expr);
     }
 }
 
-void ExpressionCodegen::emit_int_constant(ostream& out, const IntConstant* int_constant) {
+void ExpressionCodegen::emit_int_constant(ostream &out, const IntConstant *int_constant)
+{
     string label = static_constants_->use_int_constant(int_constant->get_value());
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
 }
 
-void ExpressionCodegen::emit_assignment(ostream& out, const Assignment* assignment) {
+void ExpressionCodegen::emit_assignment(ostream &out, const Assignment *assignment)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Assignment");
 
     generate(out, assignment->get_value());
 
     int fp_offset = lookup_var(assignment->get_assignee_name());
-    if (fp_offset != -1) {
+    if (fp_offset != -1)
+    {
         riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{fp_offset, FramePointer{}});
         return;
     }
 
     auto all_attrs = class_table_->get_all_attributes(current_class_index_);
     int attr_i = -1;
-    for (int i = 0; i < (int)all_attrs.size(); ++i) {
-        if (all_attrs[i] == assignment->get_assignee_name()) { attr_i = i; break; }
+    for (int i = 0; i < (int)all_attrs.size(); ++i)
+    {
+        if (all_attrs[i] == assignment->get_assignee_name())
+        {
+            attr_i = i;
+            break;
+        }
     }
 
-    if (attr_i < 0) {
+    if (attr_i < 0)
+    {
         riscv_emit::emit_comment(out, "ICE: assignment to unknown identifier");
         return;
     }
@@ -313,16 +377,18 @@ void ExpressionCodegen::emit_assignment(ostream& out, const Assignment* assignme
     riscv_emit::emit_store_word(out, ArgumentRegister{0}, MemoryLocation{byte_offset, SavedRegister{1}});
 }
 
-void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocation* mi) {
+void ExpressionCodegen::emit_method_invocation(ostream &out, const MethodInvocation *mi)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Method Invocation");
 
-    const auto& args = mi->get_arguments();
+    const auto &args = mi->get_arguments();
     const int argc = args.size();
 
     push_register(out, FramePointer{});
 
-    for (int i = argc - 1; i >= 0; --i) {
+    for (int i = argc - 1; i >= 0; --i)
+    {
         generate(out, args[i]);
         push_register(out, ArgumentRegister{0});
     }
@@ -340,40 +406,53 @@ void ExpressionCodegen::emit_method_invocation(ostream& out, const MethodInvocat
 }
 
 void ExpressionCodegen::emit_attributes(
-    ostream& out,
-    const vector<string>& attribute_names,
-    int class_index
-) {
+    ostream &out,
+    const vector<string> &attribute_names,
+    int class_index)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Init attributes");
 
     auto all_attrs = class_table_->get_all_attributes(class_index);
     const string current_class_name(class_table_->get_name(class_index));
 
-    for (const string& attr_name : attribute_names) {
+    for (const string &attr_name : attribute_names)
+    {
         int pos = -1;
-        for (int i = 0; i < (int)all_attrs.size(); ++i) {
-            if (all_attrs[i] == attr_name) { pos = i; break; }
+        for (int i = 0; i < (int)all_attrs.size(); ++i)
+        {
+            if (all_attrs[i] == attr_name)
+            {
+                pos = i;
+                break;
+            }
         }
-        if (pos < 0) continue;
+        if (pos < 0)
+            continue;
 
         int byte_offset = (3 + pos) * 4;
 
         riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
 
-        const Expr* init = class_table_->transitive_get_attribute_initializer(current_class_name, attr_name);
+        const Expr *init = class_table_->transitive_get_attribute_initializer(current_class_name, attr_name);
 
-        if (init) {
+        if (init)
+        {
             generate(out, init);
-        } else {
+        }
+        else
+        {
             auto opt_type = class_table_->transitive_get_attribute_type(class_index, attr_name);
             int type_index = opt_type ? *opt_type : 0;
             string type_name(class_table_->get_name(type_index));
             string label = static_constants_->use_default_value(type_name);
 
-            if (!label.empty()) {
+            if (!label.empty())
+            {
                 riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
-            } else {
+            }
+            else
+            {
                 riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
             }
         }
@@ -386,21 +465,24 @@ void ExpressionCodegen::emit_attributes(
     riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
 }
 
-void ExpressionCodegen::bind_formals(const vector<string>& formals) {
+void ExpressionCodegen::bind_formals(const vector<string> &formals)
+{
     int offset = 4;
-    for (const auto& name : formals) {
+    for (const auto &name : formals)
+    {
         bind_var(name, offset);
         offset += 4;
     }
 }
 
-void ExpressionCodegen::emit_if_then_else_fi(ostream& out, const IfThenElseFi* if_then_else_fi) {
+void ExpressionCodegen::emit_if_then_else_fi(ostream &out, const IfThenElseFi *if_then_else_fi)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "If Then Else Fi");
 
     int id = riscv_emit::if_then_else_fi_label_count++;
     string else_lbl = "else_branch_" + to_string(id);
-    string fi_lbl   = "fi_end_" + to_string(id);
+    string fi_lbl = "fi_end_" + to_string(id);
 
     generate(out, if_then_else_fi->get_condition());
 
@@ -416,12 +498,14 @@ void ExpressionCodegen::emit_if_then_else_fi(ostream& out, const IfThenElseFi* i
     riscv_emit::emit_label(out, fi_lbl);
 }
 
-void ExpressionCodegen::emit_bool_constant(ostream& out, const BoolConstant* bool_constant) {
+void ExpressionCodegen::emit_bool_constant(ostream &out, const BoolConstant *bool_constant)
+{
     string label = static_constants_->use_bool_constant(bool_constant->get_value());
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, label);
 }
 
-void ExpressionCodegen::emit_is_void(ostream& out, const IsVoid* is_void) {
+void ExpressionCodegen::emit_is_void(ostream &out, const IsVoid *is_void)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "IsVoid");
 
@@ -429,7 +513,7 @@ void ExpressionCodegen::emit_is_void(ostream& out, const IsVoid* is_void) {
 
     int id = riscv_emit::if_then_else_fi_label_count++;
     string true_lbl = "isvoid_true_" + to_string(id);
-    string end_lbl  = "isvoid_end_"  + to_string(id);
+    string end_lbl = "isvoid_end_" + to_string(id);
 
     riscv_emit::emit_branch_equal_zero(out, ArgumentRegister{0}, true_lbl);
 
@@ -442,12 +526,13 @@ void ExpressionCodegen::emit_is_void(ostream& out, const IsVoid* is_void) {
     riscv_emit::emit_label(out, end_lbl);
 }
 
-void ExpressionCodegen::emit_integer_comparison(ostream& out, const IntegerComparison* integer_comparison) {
+void ExpressionCodegen::emit_integer_comparison(ostream &out, const IntegerComparison *integer_comparison)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Integer Comparison");
 
     generate(out, integer_comparison->get_lhs());
-    push_register(out, ArgumentRegister{0}); 
+    push_register(out, ArgumentRegister{0});
 
     generate(out, integer_comparison->get_rhs());
     riscv_emit::emit_move(out, TempRegister{1}, ArgumentRegister{0});
@@ -459,23 +544,26 @@ void ExpressionCodegen::emit_integer_comparison(ostream& out, const IntegerCompa
     riscv_emit::emit_load_word(out, TempRegister{0}, MemoryLocation{12, TempRegister{0}});
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{12, TempRegister{1}});
 
-    switch (integer_comparison->get_kind()) {
-        case IntegerComparison::Kind::LessThan: {
-            riscv_emit::emit_set_less_than(out, TempRegister{2}, TempRegister{0}, TempRegister{1});
-            break;
-        }
-        case IntegerComparison::Kind::LessThanEqual: {
-            riscv_emit::emit_set_less_than(out, TempRegister{2}, TempRegister{1}, TempRegister{0});
-            riscv_emit::emit_xor_immediate(out, TempRegister{2}, TempRegister{2}, 1);
-            break;
-        }
-        default:
-            break;
+    switch (integer_comparison->get_kind())
+    {
+    case IntegerComparison::Kind::LessThan:
+    {
+        riscv_emit::emit_set_less_than(out, TempRegister{2}, TempRegister{0}, TempRegister{1});
+        break;
+    }
+    case IntegerComparison::Kind::LessThanEqual:
+    {
+        riscv_emit::emit_set_less_than(out, TempRegister{2}, TempRegister{1}, TempRegister{0});
+        riscv_emit::emit_xor_immediate(out, TempRegister{2}, TempRegister{2}, 1);
+        break;
+    }
+    default:
+        break;
     }
 
     int id = riscv_emit::if_then_else_fi_label_count++;
     string false_lbl = "int_comp_false_" + to_string(id);
-    string end_lbl   = "int_comp_end_"   + to_string(id);
+    string end_lbl = "int_comp_end_" + to_string(id);
 
     riscv_emit::emit_branch_equal_zero(out, TempRegister{2}, false_lbl);
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, static_constants_->use_bool_constant(true));
@@ -487,7 +575,8 @@ void ExpressionCodegen::emit_integer_comparison(ostream& out, const IntegerCompa
     riscv_emit::emit_label(out, end_lbl);
 }
 
-void ExpressionCodegen::emit_equality_comparison(ostream& out, const EqualityComparison* equality_comparison) {
+void ExpressionCodegen::emit_equality_comparison(ostream &out, const EqualityComparison *equality_comparison)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Equality Comparison");
 
@@ -502,19 +591,19 @@ void ExpressionCodegen::emit_equality_comparison(ostream& out, const EqualityCom
 
     const int id = riscv_emit::if_then_else_fi_label_count++;
 
-    const string ret_true     = "eq_true_" + to_string(id);
-    const string ret_false    = "eq_false_" + to_string(id);
-    const string end_lbl      = "eq_end_" + to_string(id);
+    const string ret_true = "eq_true_" + to_string(id);
+    const string ret_false = "eq_false_" + to_string(id);
+    const string end_lbl = "eq_end_" + to_string(id);
 
     const string lhs_void_lbl = "eq_lhs_void_" + to_string(id);
-    const string after_void   = "eq_after_void_" + to_string(id);
+    const string after_void = "eq_after_void_" + to_string(id);
 
-    const string check_int    = "eq_check_int_" + to_string(id);
-    const string check_bool   = "eq_check_bool_" + to_string(id);
+    const string check_int = "eq_check_int_" + to_string(id);
+    const string check_bool = "eq_check_bool_" + to_string(id);
     const string check_string = "eq_check_string_" + to_string(id);
 
-    const string str_loop     = "eq_str_loop_" + to_string(id);
-    const string str_ok       = "eq_str_ok_" + to_string(id);
+    const string str_loop = "eq_str_loop_" + to_string(id);
+    const string str_ok = "eq_str_ok_" + to_string(id);
 
     riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{0}, TempRegister{1});
     riscv_emit::emit_set_equal_zero(out, TempRegister{4}, TempRegister{4});
@@ -535,8 +624,8 @@ void ExpressionCodegen::emit_equality_comparison(ostream& out, const EqualityCom
     riscv_emit::emit_subtract(out, TempRegister{4}, TempRegister{2}, TempRegister{3});
     riscv_emit::emit_branch_not_equal_zero(out, TempRegister{4}, ret_false);
 
-    const int int_tag    = class_table_->get_index("Int");
-    const int bool_tag   = class_table_->get_index("Bool");
+    const int int_tag = class_table_->get_index("Int");
+    const int bool_tag = class_table_->get_index("Bool");
     const int string_tag = class_table_->get_index("String");
 
     riscv_emit::emit_add_immediate(out, TempRegister{4}, ZeroRegister{}, int_tag);
@@ -608,13 +697,14 @@ void ExpressionCodegen::emit_equality_comparison(ostream& out, const EqualityCom
     riscv_emit::emit_label(out, end_lbl);
 }
 
-void ExpressionCodegen::emit_while_loop_pool(ostream& out, const WhileLoopPool* w) {
+void ExpressionCodegen::emit_while_loop_pool(ostream &out, const WhileLoopPool *w)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "While Loop");
 
     int id = riscv_emit::while_loop_pool_label_count++;
     string begin_lbl = "while_begin_" + to_string(id);
-    string end_lbl   = "while_end_"   + to_string(id);
+    string end_lbl = "while_end_" + to_string(id);
 
     riscv_emit::emit_label(out, begin_lbl);
 
@@ -632,7 +722,8 @@ void ExpressionCodegen::emit_while_loop_pool(ostream& out, const WhileLoopPool* 
     riscv_emit::emit_move(out, ArgumentRegister{0}, ZeroRegister{});
 }
 
-void ExpressionCodegen::emit_integer_negation(ostream& out, const IntegerNegation* integer_negation) {
+void ExpressionCodegen::emit_integer_negation(ostream &out, const IntegerNegation *integer_negation)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Integer Negation");
 
@@ -650,7 +741,8 @@ void ExpressionCodegen::emit_integer_negation(ostream& out, const IntegerNegatio
     riscv_emit::emit_store_word(out, TempRegister{3}, MemoryLocation{12, ArgumentRegister{0}});
 }
 
-void ExpressionCodegen::emit_boolean_negation(ostream& out, const BooleanNegation* boolean_negation) {
+void ExpressionCodegen::emit_boolean_negation(ostream &out, const BooleanNegation *boolean_negation)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Boolean Negation");
 
@@ -667,7 +759,8 @@ void ExpressionCodegen::emit_boolean_negation(ostream& out, const BooleanNegatio
     riscv_emit::emit_store_word(out, TempRegister{3}, MemoryLocation{12, ArgumentRegister{0}});
 }
 
-void ExpressionCodegen::emit_arithmetic(ostream& out, const Arithmetic* arithmetic) {
+void ExpressionCodegen::emit_arithmetic(ostream &out, const Arithmetic *arithmetic)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Arithmetic");
 
@@ -675,30 +768,31 @@ void ExpressionCodegen::emit_arithmetic(ostream& out, const Arithmetic* arithmet
     push_register(out, ArgumentRegister{0});
 
     generate(out, arithmetic->get_rhs());
-    riscv_emit::emit_move(out, TempRegister{3}, ArgumentRegister{0}); 
+    riscv_emit::emit_move(out, TempRegister{3}, ArgumentRegister{0});
 
-    riscv_emit::emit_load_word(out, TempRegister{4}, MemoryLocation{4, StackPointer{}}); 
+    riscv_emit::emit_load_word(out, TempRegister{4}, MemoryLocation{4, StackPointer{}});
     pop_words(out, 1);
 
     // unbox operands
     riscv_emit::emit_load_word(out, TempRegister{3}, MemoryLocation{12, TempRegister{3}});
     riscv_emit::emit_load_word(out, TempRegister{4}, MemoryLocation{12, TempRegister{4}});
 
-    switch (arithmetic->get_kind()) {
-        case Arithmetic::Kind::Addition:
-            riscv_emit::emit_add(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
-            break;
-        case Arithmetic::Kind::Subtraction:
-            riscv_emit::emit_subtract(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
-            break;
-        case Arithmetic::Kind::Multiplication:
-            riscv_emit::emit_multiply(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
-            break;
-        case Arithmetic::Kind::Division:
-            riscv_emit::emit_divide(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
-            break;
-        default:
-            break;
+    switch (arithmetic->get_kind())
+    {
+    case Arithmetic::Kind::Addition:
+        riscv_emit::emit_add(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+        break;
+    case Arithmetic::Kind::Subtraction:
+        riscv_emit::emit_subtract(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+        break;
+    case Arithmetic::Kind::Multiplication:
+        riscv_emit::emit_multiply(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+        break;
+    case Arithmetic::Kind::Division:
+        riscv_emit::emit_divide(out, SavedRegister{2}, TempRegister{4}, TempRegister{3});
+        break;
+    default:
+        break;
     }
 
     riscv_emit::emit_load_address(out, ArgumentRegister{0}, "Int_protObj");
@@ -709,11 +803,13 @@ void ExpressionCodegen::emit_arithmetic(ostream& out, const Arithmetic* arithmet
     riscv_emit::emit_store_word(out, SavedRegister{2}, MemoryLocation{12, ArgumentRegister{0}});
 }
 
-void ExpressionCodegen::emit_parenthesized_expr(ostream& out, const ParenthesizedExpr* parenthesized_expr) {
+void ExpressionCodegen::emit_parenthesized_expr(ostream &out, const ParenthesizedExpr *parenthesized_expr)
+{
     generate(out, parenthesized_expr->get_contents());
 }
 
-void ExpressionCodegen::emit_case_of_esac(ostream& out, const CaseOfEsac* e) {
+void ExpressionCodegen::emit_case_of_esac(ostream &out, const CaseOfEsac *e)
+{
     riscv_emit::emit_empty_line(out);
     riscv_emit::emit_comment(out, "Case Of Esac");
 
@@ -721,50 +817,65 @@ void ExpressionCodegen::emit_case_of_esac(ostream& out, const CaseOfEsac* e) {
     riscv_emit::emit_move(out, TempRegister{0}, ArgumentRegister{0}); // save obj
 
     int id = riscv_emit::case_of_esac_count++;
-    string end_lbl      = "case_end_" + to_string(id);
-    string void_lbl     = "case_void_" + to_string(id);
+    string end_lbl = "case_end_" + to_string(id);
+    string void_lbl = "case_void_" + to_string(id);
     string no_match_lbl = "case_no_match_" + to_string(id);
 
     riscv_emit::emit_branch_equal_zero(out, TempRegister{0}, void_lbl);
 
     riscv_emit::emit_load_word(out, TempRegister{1}, MemoryLocation{0, TempRegister{0}}); // get tag
 
-    vector<const CaseOfEsac::Case*> cases;
+    vector<const CaseOfEsac::Case *> cases;
     cases.reserve(e->get_cases().size());
-    for (const auto& cs : e->get_cases()) cases.push_back(&cs);
+    for (const auto &cs : e->get_cases())
+        cases.push_back(&cs);
 
     sort(cases.begin(), cases.end(),
-        [this](const CaseOfEsac::Case* a, const CaseOfEsac::Case* b) {
-            int ta = a->get_type();
-            int tb = b->get_type();
-            if (ta == tb) return false;
+         [this](const CaseOfEsac::Case *a, const CaseOfEsac::Case *b)
+         {
+             int ta = a->get_type();
+             int tb = b->get_type();
+             if (ta == tb)
+                 return false;
 
-            bool a_sub_b = class_table_->is_subclass_of(ta, tb);
-            bool b_sub_a = class_table_->is_subclass_of(tb, ta);
+             bool a_sub_b = class_table_->is_subclass_of(ta, tb);
+             bool b_sub_a = class_table_->is_subclass_of(tb, ta);
 
-            if (a_sub_b != b_sub_a) return a_sub_b;
-            return ta < tb;
-        });
+             if (a_sub_b != b_sub_a)
+                 return a_sub_b;
+             return ta < tb;
+         });
 
-    for (const auto* cs : cases) {
+    for (const auto *cs : cases)
+    {
         int T = cs->get_type();
 
-        string br_lbl   = "case_branch_" + to_string(id) + "_" + to_string(T);
+        string br_lbl = "case_branch_" + to_string(id) + "_" + to_string(T);
         string next_lbl = br_lbl + "_next";
 
         int min_tag = T, max_tag = T;
         bool first = true;
 
         int n = class_table_->get_num_of_classes();
-        for (int c = 0; c < n; ++c) {
-            if (class_table_->is_subclass_of(c, T)) {
-                if (first) { min_tag = max_tag = c; first = false; }
-                else { min_tag = min(min_tag, c); max_tag = max(max_tag, c); }
+        for (int c = 0; c < n; ++c)
+        {
+            if (class_table_->is_subclass_of(c, T))
+            {
+                if (first)
+                {
+                    min_tag = max_tag = c;
+                    first = false;
+                }
+                else
+                {
+                    min_tag = min(min_tag, c);
+                    max_tag = max(max_tag, c);
+                }
             }
         }
 
         riscv_emit::emit_add_immediate(out, TempRegister{2}, ZeroRegister{}, min_tag);
-        riscv_emit::emit_subtract(out, TempRegister{3}, TempRegister{1}, TempRegister{2}); 
+        riscv_emit::emit_subtract(out, TempRegister{3}, TempRegister{1}, TempRegister{2});
         riscv_emit::emit_branch_less_than_zero(out, TempRegister{3}, next_lbl);
 
         riscv_emit::emit_add_immediate(out, TempRegister{2}, ZeroRegister{}, max_tag);
@@ -777,7 +888,8 @@ void ExpressionCodegen::emit_case_of_esac(ostream& out, const CaseOfEsac* e) {
 
     riscv_emit::emit_jump(out, no_match_lbl);
 
-    for (const auto* cs : cases) {
+    for (const auto *cs : cases)
+    {
         int T = cs->get_type();
         string br_lbl = "case_branch_" + to_string(id) + "_" + to_string(T);
         riscv_emit::emit_label(out, br_lbl);
@@ -800,7 +912,7 @@ void ExpressionCodegen::emit_case_of_esac(ostream& out, const CaseOfEsac* e) {
 
     riscv_emit::emit_label(out, void_lbl);
 
-    riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1}); 
+    riscv_emit::emit_move(out, ArgumentRegister{0}, SavedRegister{1});
     push_register(out, FramePointer{});
 
     riscv_emit::emit_load_address(out, TempRegister{2}, get_file_name_label());
@@ -824,10 +936,10 @@ void ExpressionCodegen::emit_case_of_esac(ostream& out, const CaseOfEsac* e) {
     riscv_emit::emit_load_address(out, TempRegister{2}, static_constants_->use_int_constant(e->get_line()));
     push_register(out, TempRegister{2});
 
-    riscv_emit::emit_load_address(out, TempRegister{2}, "class_nameTab");             
-    riscv_emit::emit_shift_left_immediate(out, TempRegister{3}, TempRegister{1}, 2); 
-    riscv_emit::emit_add(out, TempRegister{2}, TempRegister{2}, TempRegister{3});    
-    riscv_emit::emit_load_word(out, TempRegister{2}, MemoryLocation{0, TempRegister{2}}); 
+    riscv_emit::emit_load_address(out, TempRegister{2}, "class_nameTab");
+    riscv_emit::emit_shift_left_immediate(out, TempRegister{3}, TempRegister{1}, 2);
+    riscv_emit::emit_add(out, TempRegister{2}, TempRegister{2}, TempRegister{3});
+    riscv_emit::emit_load_word(out, TempRegister{2}, MemoryLocation{0, TempRegister{2}});
     push_register(out, TempRegister{2});
     riscv_emit::emit_call(out, "_case_abort_no_match");
     riscv_emit::emit_jump(out, end_lbl);

@@ -6,16 +6,18 @@
 
 using namespace std;
 
-void CoolCodegen::generate(ostream& out) {
+void CoolCodegen::generate(ostream &out)
+{
     class_table_->normalize_indexes();
     class_table_->compute_sub_hierarchy_sizes();
 
-    emit_methods(out); 
-    emit_tables(out);    
+    emit_methods(out);
+    emit_tables(out);
     static_constants_.emit_all(out);
 }
 
-void CoolCodegen::emit_methods(ostream& out) {
+void CoolCodegen::emit_methods(ostream &out)
+{
     riscv_emit::emit_directive(out, "text");
     riscv_emit::emit_empty_line(out);
 
@@ -23,24 +25,27 @@ void CoolCodegen::emit_methods(ostream& out) {
     riscv_emit::emit_label(out, "_inf_loop");
     out << "    j _inf_loop" << endl;
     riscv_emit::emit_empty_line(out);
-    
+
     riscv_emit::emit_header_comment(out, "Method Implementations");
 
     int num_classes = class_table_->get_num_of_classes();
 
     vector<string> base_class_names = {"Object", "IO", "Int", "Bool", "String"};
 
-    for (int class_index = 0; class_index < num_classes; ++class_index) {
+    for (int class_index = 0; class_index < num_classes; ++class_index)
+    {
         string_view class_name_sv = class_table_->get_name(class_index);
         string class_name(class_name_sv.data(), class_name_sv.size());
 
-        if (find(base_class_names.begin(), base_class_names.end(), class_name) != base_class_names.end()) {
+        if (find(base_class_names.begin(), base_class_names.end(), class_name) != base_class_names.end())
+        {
             continue;
         }
 
         auto methods = class_table_->get_method_names(class_index);
 
-        for (const auto& method_name : methods) {
+        for (const auto &method_name : methods)
+        {
             riscv_emit::emit_empty_line(out);
             riscv_emit::emit_directive(out, "globl");
             string function_label = class_name + "." + method_name;
@@ -68,7 +73,7 @@ void CoolCodegen::emit_methods(ostream& out) {
             expression_codegen_.bind_formals(formals);
 
             expression_codegen_.generate(out, class_table_->get_method_body(class_index, method_name));
-            
+
             expression_codegen_.end_scope();
 
             // Epilogue
@@ -91,7 +96,8 @@ void CoolCodegen::emit_methods(ostream& out) {
     riscv_emit::emit_empty_line(out);
 }
 
-void CoolCodegen::emit_tables(ostream& out) {
+void CoolCodegen::emit_tables(ostream &out)
+{
     riscv_emit::emit_directive(out, "data");
     riscv_emit::emit_empty_line(out);
 
@@ -106,43 +112,49 @@ void CoolCodegen::emit_tables(ostream& out) {
     emit_class_object_table(out, class_names);
 }
 
-void CoolCodegen::emit_name_table(ostream& out, vector<string>& class_names) {
+void CoolCodegen::emit_name_table(ostream &out, vector<string> &class_names)
+{
     riscv_emit::emit_header_comment(out, "Class Name Table");
     riscv_emit::emit_p2align(out, 2);
     riscv_emit::emit_directive(out, "globl");
     out << " class_nameTab" << endl;
     riscv_emit::emit_label(out, "class_nameTab");
-    
-    for (const auto& class_name : class_names) {
+
+    for (const auto &class_name : class_names)
+    {
         riscv_emit::emit_word(out, class_name + "_className");
     }
 
     riscv_emit::emit_empty_line(out);
 
-    for (const auto& class_name : class_names) {
+    for (const auto &class_name : class_names)
+    {
         emit_className_attributes(out, class_name);
     }
 }
 
-void CoolCodegen::emit_className_attributes(ostream& out, const string& class_name) {
+void CoolCodegen::emit_className_attributes(ostream &out, const string &class_name)
+{
     emit_length_attribute(out, class_name);
     emit_className(out, class_name);
 }
 
-void CoolCodegen::emit_length_attribute(ostream& out, const string& class_name) {
+void CoolCodegen::emit_length_attribute(ostream &out, const string &class_name)
+{
     riscv_emit::emit_gc_tag(out);
     riscv_emit::emit_label(out, class_name + "_classNameLength");
-    riscv_emit::emit_word(out, 2);  // Int tag
-    riscv_emit::emit_word(out, 4);  // object size in words
-    riscv_emit::emit_word(out, 0);  // dispatch table
+    riscv_emit::emit_word(out, 2); // Int tag
+    riscv_emit::emit_word(out, 4); // object size in words
+    riscv_emit::emit_word(out, 0); // dispatch table
     riscv_emit::emit_word(out, class_name.length());
     riscv_emit::emit_empty_line(out);
 }
 
-void CoolCodegen::emit_className(ostream& out, const string& class_name) {
+void CoolCodegen::emit_className(ostream &out, const string &class_name)
+{
     riscv_emit::emit_gc_tag(out);
     riscv_emit::emit_label(out, class_name + "_className");
-    riscv_emit::emit_word(out, 4);  // String tag
+    riscv_emit::emit_word(out, 4); // String tag
 
     size_t str_len = class_name.length() + 1;
     size_t obj_size = ceil(str_len / 4.0) + 4;
@@ -151,49 +163,64 @@ void CoolCodegen::emit_className(ostream& out, const string& class_name) {
     riscv_emit::emit_word(out, class_name + "_classNameLength");
     riscv_emit::emit_string(out, "\"" + class_name + "\"");
 
-    for (size_t i = str_len; i % 4 != 0; ++i) {
+    for (size_t i = str_len; i % 4 != 0; ++i)
+    {
         riscv_emit::emit_byte(out, 0);
     }
 
     riscv_emit::emit_empty_line(out);
 }
 
-void CoolCodegen::emit_prototype_tables(ostream& out, vector<string>& class_names) {
+void CoolCodegen::emit_prototype_tables(ostream &out, vector<string> &class_names)
+{
     riscv_emit::emit_header_comment(out, "Prototype Object Table");
     riscv_emit::emit_p2align(out, 2);
-    
-    for (const auto& name : class_names) {
+
+    for (const auto &name : class_names)
+    {
         emit_prototype_table(out, name);
     }
 }
 
-void CoolCodegen::emit_prototype_table(ostream& out, const string& class_name) {
+void CoolCodegen::emit_prototype_table(ostream &out, const string &class_name)
+{
     riscv_emit::emit_gc_tag(out);
     riscv_emit::emit_directive(out, "globl");
     out << " " << class_name << "_protObj" << endl;
     riscv_emit::emit_label(out, class_name + "_protObj");
     riscv_emit::emit_word(out, class_table_->get_index(class_name)); // tag
 
-    if (class_name == "Object") {
+    if (class_name == "Object")
+    {
         riscv_emit::emit_word(out, 3);
         riscv_emit::emit_word(out, "Object_dispTab");
-    } else if (class_name == "IO") {
+    }
+    else if (class_name == "IO")
+    {
         riscv_emit::emit_word(out, 3);
         riscv_emit::emit_word(out, "IO_dispTab");
-    } else if (class_name == "Int") {
+    }
+    else if (class_name == "Int")
+    {
         riscv_emit::emit_word(out, 4);
         riscv_emit::emit_word(out, 0);
         riscv_emit::emit_word(out, 0);
-    } else if (class_name == "Bool") {
+    }
+    else if (class_name == "Bool")
+    {
         riscv_emit::emit_word(out, 4);
         riscv_emit::emit_word(out, 0);
         riscv_emit::emit_word(out, 0);
-    } else if (class_name == "String") {
+    }
+    else if (class_name == "String")
+    {
         riscv_emit::emit_word(out, 5);
         riscv_emit::emit_word(out, "String_dispTab");
         riscv_emit::emit_word(out, 0);
         riscv_emit::emit_word(out, 0);
-    } else {
+    }
+    else
+    {
         size_t class_index = class_table_->get_index(class_name);
         auto attributes = class_table_->get_attributes(class_index);
 
@@ -201,9 +228,11 @@ void CoolCodegen::emit_prototype_table(ostream& out, const string& class_name) {
         riscv_emit::emit_word(out, obj_size);
         riscv_emit::emit_word(out, class_name + "_dispTab");
 
-        for (string& attr_name : attributes) {
+        for (string &attr_name : attributes)
+        {
             auto attr_type_index = class_table_->get_attribute_type(class_index, attr_name);
-            if (!attr_type_index) {
+            if (!attr_type_index)
+            {
                 riscv_emit::emit_word(out, 0);
                 continue;
             }
@@ -211,30 +240,41 @@ void CoolCodegen::emit_prototype_table(ostream& out, const string& class_name) {
             string_view attr_type_sv = class_table_->get_name(attr_type_index.value());
             string attr_type(attr_type_sv.data(), attr_type_sv.size());
 
-            if (attr_type == "Int") {
+            if (attr_type == "Int")
+            {
                 riscv_emit::emit_word(out, static_constants_.use_int_constant(0));
-            } else if (attr_type == "Bool") {
+            }
+            else if (attr_type == "Bool")
+            {
                 riscv_emit::emit_word(out, static_constants_.use_bool_constant(false));
-            } else if (attr_type == "String") {
+            }
+            else if (attr_type == "String")
+            {
                 riscv_emit::emit_word(out, static_constants_.use_default_value("String"));
-            } else {
+            }
+            else
+            {
                 riscv_emit::emit_word(out, 0);
             }
         }
     }
-    
+
     riscv_emit::emit_empty_line(out);
 }
 
-void CoolCodegen::emit_dispatch_tables(ostream& out, vector<string>& class_names, vector<string>& base_class_names) {
+void CoolCodegen::emit_dispatch_tables(ostream &out, vector<string> &class_names, vector<string> &base_class_names)
+{
     riscv_emit::emit_header_comment(out, "Dispatch Tables");
-    for (const auto& class_name : class_names) {
+    for (const auto &class_name : class_names)
+    {
         emit_dispatch_table(out, class_name, base_class_names);
     }
 }
 
-void CoolCodegen::emit_dispatch_table(ostream& out, const string& class_name, vector<string>& base_class_names) {
-    if (find(base_class_names.begin(), base_class_names.end(), class_name) != base_class_names.end()) {
+void CoolCodegen::emit_dispatch_table(ostream &out, const string &class_name, vector<string> &base_class_names)
+{
+    if (find(base_class_names.begin(), base_class_names.end(), class_name) != base_class_names.end())
+    {
         riscv_emit::emit_directive(out, "globl");
         out << " " << class_name << "_dispTab" << endl;
     }
@@ -243,7 +283,8 @@ void CoolCodegen::emit_dispatch_table(ostream& out, const string& class_name, ve
     size_t class_index = class_table_->get_index(class_name);
     auto methods = class_table_->get_all_methods(class_index);
 
-    for (const auto& method_name : methods) {
+    for (const auto &method_name : methods)
+    {
         auto current_class_name_sv = class_table_->get_name(method_name.second);
         string current_class_name(current_class_name_sv.data(), current_class_name_sv.size());
         riscv_emit::emit_word(out, current_class_name + "." + method_name.first);
@@ -252,9 +293,10 @@ void CoolCodegen::emit_dispatch_table(ostream& out, const string& class_name, ve
     riscv_emit::emit_empty_line(out);
 }
 
-void CoolCodegen::emit_initialization_methods(ostream& out, vector<string>& class_names) {
+void CoolCodegen::emit_initialization_methods(ostream &out, vector<string> &class_names)
+{
     riscv_emit::emit_header_comment(out, "Initialization Methods");
-    
+
     out << ".globl Object_init\n\
 Object_init:\n\
     # Most of the `init` functions of the default types are no-ops, so the\n\
@@ -384,8 +426,10 @@ String_init:\n\
 
     vector<string> base = {"Object", "IO", "Int", "Bool", "String"};
 
-    for (const auto& cls : class_names) {
-        if (find(base.begin(), base.end(), cls) != base.end()) continue;
+    for (const auto &cls : class_names)
+    {
+        if (find(base.begin(), base.end(), cls) != base.end())
+            continue;
 
         riscv_emit::emit_globl(out, cls + "_init");
         riscv_emit::emit_label(out, cls + "_init");
@@ -436,11 +480,13 @@ String_init:\n\
     riscv_emit::emit_empty_line(out);
 }
 
-void CoolCodegen::emit_class_object_table(ostream& out, vector<string>& class_names) {
+void CoolCodegen::emit_class_object_table(ostream &out, vector<string> &class_names)
+{
     riscv_emit::emit_header_comment(out, "Class Object Table");
     riscv_emit::emit_label(out, "class_objTab");
-    
-    for (const auto& class_name : class_names) {
+
+    for (const auto &class_name : class_names)
+    {
         riscv_emit::emit_word(out, class_name + "_protObj");
         riscv_emit::emit_word(out, class_name + "_init");
     }
